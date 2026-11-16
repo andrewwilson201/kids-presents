@@ -1,0 +1,12 @@
+{
+  "name": "kids-presents",
+  "private": true,
+  "type": "module",
+  "description": "Party Presents. The site is static (no build step); these packages are for the tests.",
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "devDependencies": {
+    "playwright": "1.63.0"
+  }
+}

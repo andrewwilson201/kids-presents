@@ -1,0 +1,56 @@
+rules_version = '2';
+
+// Rules for Party Presents' own Firebase project (kids-presents). The Deploy database rules
+// workflow publishes this file whenever it changes on main.
+//
+// Everything for a household lives under households/{hid}. Only members can
+// read or write it. Someone joins by opening an invite link, which writes
+// their uid into members along with the household's current invite code.
+// The Firebase functions use the Admin SDK, which these rules don't apply to.
+//
+// The app is public, so anyone with a Google account can sign in. The first
+// household can be made freely; once it exists the functions write
+// config/access (functions/access.mjs), and after that new households can only
+// be made while a config/open document exists (it doesn't normally), so a
+// stranger who signs in can't do anything.
+// Joining still works with an invite link. config/ itself is admin-only: no
+// rule below matches it, so the app can't read or write it.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function household(hid) { return get(/databases/$(database)/documents/households/$(hid)).data; }
+    function isMember(hid) { return signedIn() && request.auth.uid in household(hid).members; }
+
+    match /presentUsers/{uid} {
+      allow read, write: if signedIn() && request.auth.uid == uid;
+    }
+
+    match /households/{hid} {
+      allow read: if isMember(hid);
+      allow create: if signedIn()
+        && (exists(/databases/$(database)/documents/config/open) || !exists(/databases/$(database)/documents/config/access))
+        && request.resource.data.members == [request.auth.uid]
+        && request.resource.data.inviteCode is string && request.resource.data.inviteCode.size() >= 10;
+      // Members change anything but can't remove the last member.
+      allow update: if isMember(hid) && request.resource.data.members.size() > 0;
+      // Joining: add only yourself, with the right code, and change nothing else.
+      allow update: if signedIn()
+        && !(request.auth.uid in resource.data.members)
+        && request.resource.data.joinCode == resource.data.inviteCode
+        && request.resource.data.members == resource.data.members.concat([request.auth.uid])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members', 'memberNames', 'joinCode']);
+
+      match /{document=**} {
+        allow read, write: if isMember(hid);
+      }
+    }
+
+    // Invite lookups: code -> household id and display name. Can't be listed.
+    match /invites/{code} {
+      allow get: if signedIn();
+      allow create, update: if isMember(request.resource.data.hid);
+      allow delete: if signedIn() && isMember(resource.data.hid);
+    }
+  }
+}

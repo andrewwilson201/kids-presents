@@ -1,0 +1,7 @@
+node_modules/
+*.log
+.firebase/
+functions/shared/
+functions/node_modules/
+test/shots/
+*-debug.log

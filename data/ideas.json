@@ -1,0 +1,1928 @@
+[
+ {
+  "id": "s-lego-city-small-vehicle-set",
+  "name": "LEGO City small vehicle set",
+  "description": "A small City set (police car, fire truck, digger). Quick to build, plays well after.",
+  "price": 10,
+  "ageMin": 5,
+  "ageMax": 9,
+  "for": "any",
+  "category": "Building",
+  "interests": [
+   "lego",
+   "building",
+   "vehicles",
+   "police",
+   "fire engines"
+  ],
+  "search": "LEGO City small set"
+ },
+ {
+  "id": "s-lego-friends-small-set",
+  "name": "LEGO Friends small set",
+  "description": "A small Friends set: café, vet, pony stable.",
+  "price": 10,
+  "ageMin": 5,
+  "ageMax": 9,
+  "for": "any",
+  "category": "Building",
+  "interests": [
+   "lego",
+   "building",
+   "animals",
+   "friends"
+  ],
+  "search": "LEGO Friends small set"
+ },
+ {
+  "id": "s-lego-minecraft-small-set",
+  "name": "LEGO Minecraft small set",
+  "description": "A small Minecraft biome set; popular with gamers.",
+  "price": 12,
+  "ageMin": 7,
+  "ageMax": 11,
+  "for": "any",
+  "category": "Building",
+  "interests": [
+   "lego",
+   "minecraft",
+   "gaming"
+  ],
+  "search": "LEGO Minecraft small set"
+ },
+ {
+  "id": "s-lego-classic-creative-brick-box",
+  "name": "LEGO Classic creative brick box",
+  "description": "Loose bricks with ideas booklet; goes with any LEGO collection.",
+  "price": 15,
+  "ageMin": 4,
+  "ageMax": 10,
+  "for": "any",
+  "category": "Building",
+  "interests": [
+   "lego",
+   "building",
+   "creative"
+  ],
+  "search": "LEGO Classic creative bricks box"
+ },
+ {
+  "id": "s-lego-ninjago-small-set",
+  "name": "LEGO Ninjago small set",
+  "description": "A small Ninjago set with a minifigure or two.",
+  "price": 12,
+  "ageMin": 6,
+  "ageMax": 10,
+  "for": "any",
+  "category": "Building",
+  "interests": [
+   "lego",
+   "ninjago",
+   "ninjas",
+   "dragons"
+  ],
+  "search": "LEGO Ninjago small set"
+ },
+ {
+  "id": "s-lego-disney-princess-mini-set",
+  "name": "LEGO Disney Princess mini set",
+  "description": "A small Disney build (Frozen, Encanto, princess scenes).",
+  "price": 10,
+  "ageMin": 5,
+  "ageMax": 9,
+  "for": "any",
+  "category": "Building",
+  "interests": [
+   "lego",
+   "disney",
+   "princesses",
+   "frozen"
+  ],
+  "search": "LEGO Disney mini set"
+ },
+ {
+  "id": "s-lego-dreamzzz-small-set",
+  "name": "LEGO Dreamzzz small set",
+  "description": "Dream-creature builds that can be made two ways.",
+  "price": 12,
+  "ageMin": 7,
+  "ageMax": 10,
+  "for": "any",
+  "category": "Building",
+  "interests": [
+   "lego",
+   "building",
+   "fantasy",
+   "creatures"
+  ],
+  "search": "LEGO Dreamzzz set"
+ },
+ {
+  "id": "s-magna-tiles-or-magnetic-tiles-starter-se",
+  "name": "Magna-Tiles or magnetic tiles starter set",
+  "description": "Translucent magnetic tiles; lots of creative play.",
+  "price": 20,
+  "ageMin": 3,
+  "ageMax": 8,
+  "for": "any",
+  "category": "Building",
+  "interests": [
+   "building",
+   "magnets",
+   "construction",
+   "stem"
+  ],
+  "search": "magnetic tiles 32 piece set"
+ },
+ {
+  "id": "s-marble-run-starter-set",
+  "name": "Marble run starter set",
+  "description": "Build-it-yourself marble run with plenty of pieces.",
+  "price": 15,
+  "ageMin": 5,
+  "ageMax": 10,
+  "for": "any",
+  "category": "Building",
+  "interests": [
+   "building",
+   "marbles",
+   "stem",
+   "engineering"
+  ],
+  "search": "marble run construction set kids"
+ },
+ {
+  "id": "s-plus-plus-tube",
+  "name": "Plus-Plus tube",
+  "description": "Interlocking puzzle pieces for 2D and 3D builds.",
+  "price": 12,
+  "ageMin": 5,
+  "ageMax": 12,
+  "for": "any",
+  "category": "Building",
+  "interests": [
+   "building",
+   "creative",
+   "fine motor"
+  ],
+  "search": "Plus-Plus tube"
+ },
+ {
+  "id": "s-squishmallow-8-inch",
+  "name": "Squishmallow 8 inch",
+  "description": "The collectable squishy soft toys. A safe bet for most children.",
+  "price": 12,
+  "ageMin": 3,
+  "ageMax": 12,
+  "for": "any",
+  "category": "Soft toys",
+  "interests": [
+   "squishmallows",
+   "cuddly toys",
+   "collecting"
+  ],
+  "search": "Squishmallows 8 inch"
+ },
+ {
+  "id": "s-jellycat-small-soft-toy",
+  "name": "Jellycat small soft toy",
+  "description": "A small Jellycat (bunny, dragon, octopus). Lovely quality.",
+  "price": 20,
+  "ageMin": 3,
+  "ageMax": 10,
+  "for": "any",
+  "category": "Soft toys",
+  "interests": [
+   "cuddly toys",
+   "animals"
+  ],
+  "search": "Jellycat small"
+ },
+ {
+  "id": "s-pok-mon-booster-pack-bundle",
+  "name": "Pokémon booster pack bundle",
+  "description": "Two or three Pokémon TCG boosters or a mini tin.",
+  "price": 12,
+  "ageMin": 6,
+  "ageMax": 12,
+  "for": "any",
+  "category": "Collecting",
+  "interests": [
+   "pokemon",
+   "cards",
+   "collecting",
+   "trading cards"
+  ],
+  "search": "Pokemon mini tin"
+ },
+ {
+  "id": "s-pok-mon-cuddly-toy",
+  "name": "Pokémon cuddly toy",
+  "description": "Pikachu, Eevee or a starter Pokémon plush.",
+  "price": 15,
+  "ageMin": 4,
+  "ageMax": 10,
+  "for": "any",
+  "category": "Soft toys",
+  "interests": [
+   "pokemon",
+   "cuddly toys"
+  ],
+  "search": "Pokemon plush 8 inch"
+ },
+ {
+  "id": "s-match-attax-football-sticker-starter-pac",
+  "name": "Match Attax / football sticker starter pack",
+  "description": "Football trading cards starter pack with binder.",
+  "price": 10,
+  "ageMin": 6,
+  "ageMax": 12,
+  "for": "any",
+  "category": "Collecting",
+  "interests": [
+   "football",
+   "collecting",
+   "cards",
+   "stickers"
+  ],
+  "search": "Match Attax starter pack"
+ },
+ {
+  "id": "s-panini-sticker-album-and-stickers",
+  "name": "Panini sticker album and stickers",
+  "description": "Sticker album with a few packets to get started.",
+  "price": 10,
+  "ageMin": 6,
+  "ageMax": 12,
+  "for": "any",
+  "category": "Collecting",
+  "interests": [
+   "football",
+   "stickers",
+   "collecting"
+  ],
+  "search": "Panini sticker album starter pack"
+ },
+ {
+  "id": "s-football-size-4-with-pump",
+  "name": "Football (size 4) with pump",
+  "description": "A proper size 4 ball. Club colours make it special.",
+  "price": 12,
+  "ageMin": 5,
+  "ageMax": 12,
+  "for": "any",
+  "category": "Sport",
+  "interests": [
+   "football",
+   "sport",
+   "outdoors"
+  ],
+  "search": "size 4 football kids"
+ },
+ {
+  "id": "s-mini-football-goal-set",
+  "name": "Mini football goal set",
+  "description": "Pop-up goals for the garden or park.",
+  "price": 20,
+  "ageMin": 4,
+  "ageMax": 10,
+  "for": "any",
+  "category": "Sport",
+  "interests": [
+   "football",
+   "sport",
+   "outdoors",
+   "garden"
+  ],
+  "search": "pop up football goals kids"
+ },
+ {
+  "id": "s-swingball-tennis-ball-set",
+  "name": "Swingball / tennis ball set",
+  "description": "All-surface swingball for the garden.",
+  "price": 20,
+  "ageMin": 5,
+  "ageMax": 12,
+  "for": "any",
+  "category": "Sport",
+  "interests": [
+   "tennis",
+   "garden",
+   "outdoors",
+   "sport"
+  ],
+  "search": "all surface swingball"
+ },
+ {
+  "id": "s-skipping-rope-and-chalk-set",
+  "name": "Skipping rope and chalk set",
+  "description": "Wooden-handle skipping rope with chunky pavement chalk.",
+  "price": 8,
+  "ageMin": 5,
+  "ageMax": 10,
+  "for": "any",
+  "category": "Outdoors",
+  "interests": [
+   "outdoors",
+   "playground",
+   "active"
+  ],
+  "search": "kids skipping rope pavement chalk set"
+ },
+ {
+  "id": "s-frisbee-flying-disc-set",
+  "name": "Frisbee / flying disc set",
+  "description": "Soft flying disc or Aerobie ring for the park.",
+  "price": 10,
+  "ageMin": 6,
+  "ageMax": 12,
+  "for": "any",
+  "category": "Outdoors",
+  "interests": [
+   "outdoors",
+   "sport",
+   "beach",
+   "park"
+  ],
+  "search": "Aerobie flying ring"
+ },
+ {
+  "id": "s-kite-for-kids",
+  "name": "Kite for kids",
+  "description": "Easy-flying single-line kite.",
+  "price": 12,
+  "ageMin": 5,
+  "ageMax": 12,
+  "for": "any",
+  "category": "Outdoors",
+  "interests": [
+   "outdoors",
+   "kites",
+   "wind",
+   "park"
+  ],
+  "search": "easy fly kite for kids"
+ },
+ {
+  "id": "s-bug-hunting-kit",
+  "name": "Bug hunting kit",
+  "description": "Bug viewer, net and magnifier for garden explorers.",
+  "price": 12,
+  "ageMin": 4,
+  "ageMax": 9,
+  "for": "any",
+  "category": "Nature",
+  "interests": [
+   "nature",
+   "bugs",
+   "insects",
+   "science",
+   "outdoors"
+  ],
+  "search": "bug hunting kit kids"
+ },
+ {
+  "id": "s-grow-your-own-kit",
+  "name": "Grow your own kit",
+  "description": "Sunflower, cress or pizza garden grow kit.",
+  "price": 8,
+  "ageMin": 4,
+  "ageMax": 10,
+  "for": "any",
+  "category": "Nature",
+  "interests": [
+   "gardening",
+   "nature",
+   "plants",
+   "science"
+  ],
+  "search": "kids grow your own kit"
+ },
+ {
+  "id": "s-rock-painting-kit",
+  "name": "Rock painting kit",
+  "description": "Stones, paints and sealant for painted pebbles.",
+  "price": 12,
+  "ageMin": 5,
+  "ageMax": 10,
+  "for": "any",
+  "category": "Arts & crafts",
+  "interests": [
+   "art",
+   "painting",
+   "crafts",
+   "rocks"
+  ],
+  "search": "rock painting kit kids"
+ },
+ {
+  "id": "s-hama-perler-beads-set",
+  "name": "Hama / perler beads set",
+  "description": "Iron-on beads with pegboards and patterns.",
+  "price": 10,
+  "ageMin": 5,
+  "ageMax": 11,
+  "for": "any",
+  "category": "Arts & crafts",
+  "interests": [
+   "crafts",
+   "beads",
+   "art",
+   "minecraft",
+   "pokemon"
+  ],
+  "search": "Hama beads set"
+ },
+ {
+  "id": "s-make-your-own-slime-kit",
+  "name": "Make your own slime kit",
+  "description": "Glitter or glow slime making kit.",
+  "price": 12,
+  "ageMin": 6,
+  "ageMax": 12,
+  "for": "any",
+  "category": "Science",
+  "interests": [
+   "slime",
+   "science",
+   "messy play",
+   "crafts"
+  ],
+  "search": "make your own slime kit"
+ },
+ {
+  "id": "s-crystal-growing-kit",
+  "name": "Crystal growing kit",
+  "description": "Grow crystals in a few days. Works best 8+.",
+  "price": 12,
+  "ageMin": 8,
+  "ageMax": 12,
+  "for": "any",
+  "category": "Science",
+  "interests": [
+   "science",
+   "crystals",
+   "stem",
+   "experiments"
+  ],
+  "search": "crystal growing kit kids"
+ },
+ {
+  "id": "s-volcano-fizzy-science-kit",
+  "name": "Volcano / fizzy science kit",
+  "description": "Erupting volcano or fizzy reactions kit.",
+  "price": 12,
+  "ageMin": 6,
+  "ageMax": 11,
+  "for": "any",
+  "category": "Science",
+  "interests": [
+   "science",
+   "experiments",
+   "stem",
+   "volcanoes"
+  ],
+  "search": "kids volcano science kit"
+ },
+ {
+  "id": "s-dig-it-out-dinosaur-fossil-kit",
+  "name": "Dig-it-out dinosaur fossil kit",
+  "description": "Chisel a dinosaur skeleton out of a plaster block.",
+  "price": 8,
+  "ageMin": 5,
+  "ageMax": 10,
+  "for": "any",
+  "category": "Science",
+  "interests": [
+   "dinosaurs",
+   "fossils",
+   "digging",
+   "science"
+  ],
+  "search": "dinosaur excavation kit"
+ },
+ {
+  "id": "s-dinosaur-figures-set",
+  "name": "Dinosaur figures set",
+  "description": "A tub of realistic dinosaur figures.",
+  "price": 12,
+  "ageMin": 3,
+  "ageMax": 8,
+  "for": "any",
+  "category": "Toys",
+  "interests": [
+   "dinosaurs",
+   "animals"
+  ],
+  "search": "realistic dinosaur figures set"
+ },
+ {
+  "id": "s-schleich-animal-or-dinosaur-figure",
+  "name": "Schleich animal or dinosaur figure",
+  "description": "A detailed Schleich figure (horse, dino, wild animal).",
+  "price": 10,
+  "ageMin": 4,
+  "ageMax": 10,
+  "for": "any",
+  "category": "Toys",
+  "interests": [
+   "animals",
+   "horses",
+   "dinosaurs",
+   "farm"
+  ],
+  "search": "Schleich figure"
+ },
+ {
+  "id": "s-hot-wheels-track-set",
+  "name": "Hot Wheels track set",
+  "description": "A track set with a car or two; loops and jumps.",
+  "price": 15,
+  "ageMin": 4,
+  "ageMax": 9,
+  "for": "any",
+  "category": "Toys",
+  "interests": [
+   "cars",
+   "racing",
+   "vehicles",
+   "hot wheels"
+  ],
+  "search": "Hot Wheels track set"
+ },
+ {
+  "id": "s-hot-wheels-5-car-pack",
+  "name": "Hot Wheels 5 car pack",
+  "description": "Five die-cast cars. Cheap and always welcome.",
+  "price": 7,
+  "ageMin": 3,
+  "ageMax": 9,
+  "for": "any",
+  "category": "Toys",
+  "interests": [
+   "cars",
+   "vehicles",
+   "hot wheels",
+   "racing"
+  ],
+  "search": "Hot Wheels 5 pack"
+ },
+ {
+  "id": "s-remote-control-car",
+  "name": "Remote control car",
+  "description": "Small RC stunt car with rechargeable battery.",
+  "price": 20,
+  "ageMin": 5,
+  "ageMax": 10,
+  "for": "any",
+  "category": "Toys",
+  "interests": [
+   "cars",
+   "remote control",
+   "racing",
+   "vehicles"
+  ],
+  "search": "kids remote control stunt car"
+ },
+ {
+  "id": "s-nerf-blaster-small",
+  "name": "Nerf blaster (small)",
+  "description": "A small Nerf Elite blaster with darts. Check the parents are OK with it.",
+  "price": 15,
+  "ageMin": 8,
+  "ageMax": 12,
+  "for": "any",
+  "category": "Toys",
+  "interests": [
+   "nerf",
+   "active",
+   "outdoors"
+  ],
+  "search": "Nerf Elite small blaster"
+ },
+ {
+  "id": "s-water-pistols-pair",
+  "name": "Water pistols pair",
+  "description": "Two water blasters for summer parties.",
+  "price": 8,
+  "ageMin": 4,
+  "ageMax": 10,
+  "for": "any",
+  "category": "Outdoors",
+  "interests": [
+   "outdoors",
+   "water",
+   "summer"
+  ],
+  "search": "kids water blaster pair"
+ },
+ {
+  "id": "s-paw-patrol-vehicle-with-figure",
+  "name": "Paw Patrol vehicle with figure",
+  "description": "A pup and their vehicle.",
+  "price": 12,
+  "ageMin": 3,
+  "ageMax": 6,
+  "for": "any",
+  "category": "Toys",
+  "interests": [
+   "paw patrol",
+   "vehicles",
+   "dogs"
+  ],
+  "search": "Paw Patrol vehicle figure"
+ },
+ {
+  "id": "s-bluey-figure-set",
+  "name": "Bluey figure set",
+  "description": "Bluey and family figures or a playset.",
+  "price": 12,
+  "ageMin": 3,
+  "ageMax": 7,
+  "for": "any",
+  "category": "Toys",
+  "interests": [
+   "bluey",
+   "figures",
+   "tv"
+  ],
+  "search": "Bluey figure pack"
+ },
+ {
+  "id": "s-peppa-pig-playset",
+  "name": "Peppa Pig playset",
+  "description": "Small Peppa playset or figure pack.",
+  "price": 12,
+  "ageMin": 3,
+  "ageMax": 5,
+  "for": "any",
+  "category": "Toys",
+  "interests": [
+   "peppa pig",
+   "tv",
+   "pretend play"
+  ],
+  "search": "Peppa Pig playset"
+ },
+ {
+  "id": "s-barbie-doll-with-outfit",
+  "name": "Barbie doll with outfit",
+  "description": "A Barbie with accessories.",
+  "price": 15,
+  "ageMin": 4,
+  "ageMax": 9,
+  "for": "girl",
+  "category": "Dolls",
+  "interests": [
+   "barbie",
+   "dolls",
+   "fashion"
+  ],
+  "search": "Barbie doll"
+ },
+ {
+  "id": "s-polly-pocket-compact",
+  "name": "Polly Pocket compact",
+  "description": "Tiny world in a compact. Small pieces.",
+  "price": 12,
+  "ageMin": 4,
+  "ageMax": 8,
+  "for": "girl",
+  "category": "Dolls",
+  "interests": [
+   "polly pocket",
+   "dolls",
+   "collecting"
+  ],
+  "search": "Polly Pocket compact"
+ },
+ {
+  "id": "s-sylvanian-families-figure-set",
+  "name": "Sylvanian Families figure set",
+  "description": "A Sylvanian family or baby set.",
+  "price": 15,
+  "ageMin": 4,
+  "ageMax": 9,
+  "for": "any",
+  "category": "Dolls",
+  "interests": [
+   "sylvanian families",
+   "animals",
+   "pretend play"
+  ],
+  "search": "Sylvanian Families family set"
+ },
+ {
+  "id": "s-gabby-s-dollhouse-figure-pack",
+  "name": "Gabby's Dollhouse figure pack",
+  "description": "Gabby and cat figures.",
+  "price": 12,
+  "ageMin": 3,
+  "ageMax": 7,
+  "for": "any",
+  "category": "Toys",
+  "interests": [
+   "gabby's dollhouse",
+   "cats",
+   "tv"
+  ],
+  "search": "Gabby's Dollhouse figure pack"
+ },
+ {
+  "id": "s-frozen-doll-or-accessory",
+  "name": "Frozen doll or accessory",
+  "description": "Elsa or Anna doll, or dress-up accessories.",
+  "price": 15,
+  "ageMin": 3,
+  "ageMax": 8,
+  "for": "girl",
+  "category": "Dolls",
+  "interests": [
+   "frozen",
+   "disney",
+   "princesses",
+   "dolls"
+  ],
+  "search": "Disney Frozen Elsa doll"
+ },
+ {
+  "id": "s-dress-up-costume",
+  "name": "Dress-up costume",
+  "description": "A costume in their favourite character.",
+  "price": 15,
+  "ageMin": 3,
+  "ageMax": 8,
+  "for": "any",
+  "category": "Dress-up",
+  "interests": [
+   "dress up",
+   "pretend play",
+   "superheroes",
+   "princesses"
+  ],
+  "search": "kids dress up costume"
+ },
+ {
+  "id": "s-superhero-figure",
+  "name": "Superhero figure",
+  "description": "Spider-Man, Batman or Avengers action figure.",
+  "price": 12,
+  "ageMin": 4,
+  "ageMax": 9,
+  "for": "any",
+  "category": "Toys",
+  "interests": [
+   "superheroes",
+   "marvel",
+   "spiderman",
+   "batman"
+  ],
+  "search": "Marvel action figure 6 inch"
+ },
+ {
+  "id": "s-make-your-own-jewellery-kit",
+  "name": "Make your own jewellery kit",
+  "description": "Bead bracelets or charm necklace kit.",
+  "price": 10,
+  "ageMin": 5,
+  "ageMax": 10,
+  "for": "any",
+  "category": "Arts & crafts",
+  "interests": [
+   "jewellery",
+   "crafts",
+   "beads",
+   "fashion"
+  ],
+  "search": "kids bead bracelet making kit"
+ },
+ {
+  "id": "s-friendship-bracelet-maker",
+  "name": "Friendship bracelet maker",
+  "description": "Loom or bracelet kit with threads.",
+  "price": 12,
+  "ageMin": 7,
+  "ageMax": 12,
+  "for": "any",
+  "category": "Arts & crafts",
+  "interests": [
+   "crafts",
+   "friendship bracelets",
+   "fashion"
+  ],
+  "search": "friendship bracelet kit"
+ },
+ {
+  "id": "s-scratch-art-pad-set",
+  "name": "Scratch art pad set",
+  "description": "Rainbow scratch-off sheets with stylus.",
+  "price": 8,
+  "ageMin": 4,
+  "ageMax": 10,
+  "for": "any",
+  "category": "Arts & crafts",
+  "interests": [
+   "art",
+   "drawing",
+   "crafts"
+  ],
+  "search": "rainbow scratch art set"
+ },
+ {
+  "id": "s-sticker-activity-book-bumper-pack",
+  "name": "Sticker activity book bumper pack",
+  "description": "Reusable or bumper sticker activity book.",
+  "price": 8,
+  "ageMin": 4,
+  "ageMax": 8,
+  "for": "any",
+  "category": "Books & activities",
+  "interests": [
+   "stickers",
+   "activity books"
+  ],
+  "search": "sticker activity book kids"
+ },
+ {
+  "id": "s-colouring-set-with-felt-tips",
+  "name": "Colouring set with felt tips",
+  "description": "Case of felt tips, crayons and pencils.",
+  "price": 12,
+  "ageMin": 4,
+  "ageMax": 10,
+  "for": "any",
+  "category": "Arts & crafts",
+  "interests": [
+   "art",
+   "colouring",
+   "drawing"
+  ],
+  "search": "kids art set case"
+ },
+ {
+  "id": "s-window-suncatcher-paint-kit",
+  "name": "Window / suncatcher paint kit",
+  "description": "Paint your own suncatchers.",
+  "price": 10,
+  "ageMin": 4,
+  "ageMax": 8,
+  "for": "any",
+  "category": "Arts & crafts",
+  "interests": [
+   "art",
+   "painting",
+   "crafts"
+  ],
+  "search": "suncatcher painting kit"
+ },
+ {
+  "id": "s-paint-your-own-unicorn-figure",
+  "name": "Paint your own unicorn / figure",
+  "description": "Paint a plaster or ceramic figure.",
+  "price": 10,
+  "ageMin": 4,
+  "ageMax": 9,
+  "for": "any",
+  "category": "Arts & crafts",
+  "interests": [
+   "unicorns",
+   "painting",
+   "crafts"
+  ],
+  "search": "paint your own unicorn"
+ },
+ {
+  "id": "s-unicorn-soft-toy-or-gift-set",
+  "name": "Unicorn soft toy or gift set",
+  "description": "Unicorn plush or unicorn activity box.",
+  "price": 12,
+  "ageMin": 3,
+  "ageMax": 8,
+  "for": "girl",
+  "category": "Soft toys",
+  "interests": [
+   "unicorns",
+   "rainbows",
+   "cuddly toys"
+  ],
+  "search": "unicorn gift kids"
+ },
+ {
+  "id": "s-spirograph-set",
+  "name": "Spirograph set",
+  "description": "Classic design kit.",
+  "price": 12,
+  "ageMin": 6,
+  "ageMax": 12,
+  "for": "any",
+  "category": "Arts & crafts",
+  "interests": [
+   "art",
+   "drawing",
+   "patterns"
+  ],
+  "search": "Spirograph design set"
+ },
+ {
+  "id": "s-air-dry-clay-modelling-kit",
+  "name": "Air-dry clay modelling kit",
+  "description": "Clay and tools to make animals or keepsakes.",
+  "price": 12,
+  "ageMin": 5,
+  "ageMax": 11,
+  "for": "any",
+  "category": "Arts & crafts",
+  "interests": [
+   "clay",
+   "modelling",
+   "crafts"
+  ],
+  "search": "air dry clay kit kids"
+ },
+ {
+  "id": "s-play-doh-bumper-pack",
+  "name": "Play-Doh bumper pack",
+  "description": "Tubs of Play-Doh with cutters.",
+  "price": 10,
+  "ageMin": 3,
+  "ageMax": 7,
+  "for": "any",
+  "category": "Arts & crafts",
+  "interests": [
+   "play-doh",
+   "modelling",
+   "messy play"
+  ],
+  "search": "Play-Doh 10 pack"
+ },
+ {
+  "id": "s-kinetic-sand-set",
+  "name": "Kinetic sand set",
+  "description": "Kinetic sand with moulds in a tray.",
+  "price": 12,
+  "ageMin": 3,
+  "ageMax": 8,
+  "for": "any",
+  "category": "Sensory",
+  "interests": [
+   "sand",
+   "sensory",
+   "messy play"
+  ],
+  "search": "Kinetic Sand set"
+ },
+ {
+  "id": "s-fidget-toy-bundle",
+  "name": "Fidget toy bundle",
+  "description": "Pop-its, squishies and a fidget spinner.",
+  "price": 8,
+  "ageMin": 5,
+  "ageMax": 12,
+  "for": "any",
+  "category": "Sensory",
+  "interests": [
+   "fidget toys",
+   "sensory"
+  ],
+  "search": "fidget toys pack kids"
+ },
+ {
+  "id": "s-squishy-needoh-stress-ball",
+  "name": "Squishy / Needoh stress ball",
+  "description": "The very popular squishy stress balls.",
+  "price": 6,
+  "ageMin": 5,
+  "ageMax": 12,
+  "for": "any",
+  "category": "Sensory",
+  "interests": [
+   "squishies",
+   "fidget toys",
+   "sensory"
+  ],
+  "search": "Nee Doh stress ball"
+ },
+ {
+  "id": "s-torch-head-torch",
+  "name": "Torch / head torch",
+  "description": "Kids head torch for camping and dens.",
+  "price": 10,
+  "ageMin": 5,
+  "ageMax": 12,
+  "for": "any",
+  "category": "Outdoors",
+  "interests": [
+   "camping",
+   "outdoors",
+   "adventure",
+   "torch"
+  ],
+  "search": "kids head torch"
+ },
+ {
+  "id": "s-walkie-talkies-pair",
+  "name": "Walkie-talkies pair",
+  "description": "Two-way radios for the garden or park.",
+  "price": 18,
+  "ageMin": 5,
+  "ageMax": 12,
+  "for": "any",
+  "category": "Gadgets",
+  "interests": [
+   "gadgets",
+   "spy",
+   "outdoors"
+  ],
+  "search": "kids walkie talkies"
+ },
+ {
+  "id": "s-spy-kit",
+  "name": "Spy kit",
+  "description": "Invisible ink pen, fingerprint kit, spy glasses.",
+  "price": 12,
+  "ageMin": 6,
+  "ageMax": 11,
+  "for": "any",
+  "category": "Toys",
+  "interests": [
+   "spy",
+   "detective",
+   "mystery"
+  ],
+  "search": "kids spy kit"
+ },
+ {
+  "id": "s-magic-tricks-set",
+  "name": "Magic tricks set",
+  "description": "Beginner magic kit with instructions.",
+  "price": 15,
+  "ageMin": 6,
+  "ageMax": 12,
+  "for": "any",
+  "category": "Toys",
+  "interests": [
+   "magic",
+   "tricks",
+   "performing"
+  ],
+  "search": "kids magic set"
+ },
+ {
+  "id": "s-yo-yo-or-kendama",
+  "name": "Yo-yo or kendama",
+  "description": "A good beginner yo-yo.",
+  "price": 8,
+  "ageMin": 7,
+  "ageMax": 12,
+  "for": "any",
+  "category": "Toys",
+  "interests": [
+   "skill toys",
+   "tricks"
+  ],
+  "search": "beginner yo-yo kids"
+ },
+ {
+  "id": "s-bubble-machine-or-giant-bubble-wand",
+  "name": "Bubble machine or giant bubble wand",
+  "description": "Bubble gun or giant wand kit.",
+  "price": 10,
+  "ageMin": 3,
+  "ageMax": 8,
+  "for": "any",
+  "category": "Outdoors",
+  "interests": [
+   "bubbles",
+   "outdoors",
+   "garden"
+  ],
+  "search": "kids bubble machine"
+ },
+ {
+  "id": "s-uno-uno-junior",
+  "name": "Uno / Uno Junior",
+  "description": "The card game every family plays.",
+  "price": 8,
+  "ageMin": 5,
+  "ageMax": 12,
+  "for": "any",
+  "category": "Games",
+  "interests": [
+   "card games",
+   "games",
+   "family"
+  ],
+  "search": "Uno card game"
+ },
+ {
+  "id": "s-dobble",
+  "name": "Dobble",
+  "description": "Fast spot-the-match game, small and portable.",
+  "price": 10,
+  "ageMin": 6,
+  "ageMax": 12,
+  "for": "any",
+  "category": "Games",
+  "interests": [
+   "card games",
+   "games",
+   "family",
+   "quick"
+  ],
+  "search": "Dobble card game"
+ },
+ {
+  "id": "s-guess-who",
+  "name": "Guess Who",
+  "description": "Classic two-player guessing game.",
+  "price": 15,
+  "ageMin": 6,
+  "ageMax": 10,
+  "for": "any",
+  "category": "Games",
+  "interests": [
+   "board games",
+   "games",
+   "family"
+  ],
+  "search": "Guess Who game"
+ },
+ {
+  "id": "s-pop-up-pirate",
+  "name": "Pop-up Pirate",
+  "description": "The barrel game with the jumping pirate.",
+  "price": 12,
+  "ageMin": 4,
+  "ageMax": 8,
+  "for": "any",
+  "category": "Games",
+  "interests": [
+   "games",
+   "pirates",
+   "family"
+  ],
+  "search": "Pop Up Pirate game"
+ },
+ {
+  "id": "s-hungry-hippos-or-operation",
+  "name": "Hungry Hippos or Operation",
+  "description": "Classic noisy family game.",
+  "price": 15,
+  "ageMin": 4,
+  "ageMax": 8,
+  "for": "any",
+  "category": "Games",
+  "interests": [
+   "board games",
+   "games",
+   "family"
+  ],
+  "search": "Hungry Hippos game"
+ },
+ {
+  "id": "s-exploding-kittens-kids-version",
+  "name": "Exploding Kittens (kids version)",
+  "description": "The kids edition of the card game.",
+  "price": 15,
+  "ageMin": 7,
+  "ageMax": 12,
+  "for": "any",
+  "category": "Games",
+  "interests": [
+   "card games",
+   "games",
+   "cats",
+   "family"
+  ],
+  "search": "Exploding Kittens kids edition"
+ },
+ {
+  "id": "s-jigsaw-puzzle-100-200-pieces",
+  "name": "Jigsaw puzzle (100–200 pieces)",
+  "description": "A jigsaw on a theme they love.",
+  "price": 10,
+  "ageMin": 5,
+  "ageMax": 10,
+  "for": "any",
+  "category": "Puzzles",
+  "interests": [
+   "puzzles",
+   "jigsaw"
+  ],
+  "search": "kids jigsaw 100 piece"
+ },
+ {
+  "id": "s-rubik-s-cube-or-speed-cube",
+  "name": "Rubik's Cube or speed cube",
+  "description": "A smooth speed cube.",
+  "price": 8,
+  "ageMin": 7,
+  "ageMax": 12,
+  "for": "any",
+  "category": "Puzzles",
+  "interests": [
+   "puzzles",
+   "brain teasers",
+   "skill toys"
+  ],
+  "search": "speed cube 3x3"
+ },
+ {
+  "id": "s-logic-puzzle-game-smart-games",
+  "name": "Logic puzzle game (Smart Games)",
+  "description": "Single-player logic puzzle with challenge cards.",
+  "price": 15,
+  "ageMin": 5,
+  "ageMax": 10,
+  "for": "any",
+  "category": "Puzzles",
+  "interests": [
+   "puzzles",
+   "logic",
+   "stem",
+   "games"
+  ],
+  "search": "Smart Games puzzle"
+ },
+ {
+  "id": "s-top-trumps-pack",
+  "name": "Top Trumps pack",
+  "description": "Pocket-sized; dozens of themes.",
+  "price": 5,
+  "ageMin": 6,
+  "ageMax": 12,
+  "for": "any",
+  "category": "Games",
+  "interests": [
+   "card games",
+   "facts",
+   "football",
+   "animals",
+   "collecting"
+  ],
+  "search": "Top Trumps cards"
+ },
+ {
+  "id": "s-book-david-walliams-or-roald-dahl",
+  "name": "Book: David Walliams or Roald Dahl",
+  "description": "A funny chapter book.",
+  "price": 8,
+  "ageMin": 6,
+  "ageMax": 11,
+  "for": "any",
+  "category": "Books",
+  "interests": [
+   "books",
+   "reading",
+   "funny stories"
+  ],
+  "search": "Roald Dahl book"
+ },
+ {
+  "id": "s-book-dog-man-or-cat-kid-comic",
+  "name": "Book: Dog Man or Cat Kid comic",
+  "description": "Graphic novels reluctant readers love.",
+  "price": 8,
+  "ageMin": 6,
+  "ageMax": 11,
+  "for": "any",
+  "category": "Books",
+  "interests": [
+   "books",
+   "comics",
+   "reading",
+   "funny stories"
+  ],
+  "search": "Dog Man book"
+ },
+ {
+  "id": "s-book-julia-donaldson-picture-book",
+  "name": "Book: Julia Donaldson picture book",
+  "description": "The Gruffalo, Room on the Broom and friends.",
+  "price": 7,
+  "ageMin": 3,
+  "ageMax": 6,
+  "for": "any",
+  "category": "Books",
+  "interests": [
+   "books",
+   "reading",
+   "picture books"
+  ],
+  "search": "Julia Donaldson book"
+ },
+ {
+  "id": "s-book-rainbow-magic-or-isadora-moon",
+  "name": "Book: Rainbow Magic or Isadora Moon",
+  "description": "Early chapter books with series to collect.",
+  "price": 6,
+  "ageMin": 5,
+  "ageMax": 9,
+  "for": "any",
+  "category": "Books",
+  "interests": [
+   "books",
+   "reading",
+   "fairies",
+   "magic"
+  ],
+  "search": "Isadora Moon book"
+ },
+ {
+  "id": "s-book-diary-of-a-wimpy-kid",
+  "name": "Book: Diary of a Wimpy Kid",
+  "description": "Big series, great for 8+.",
+  "price": 8,
+  "ageMin": 8,
+  "ageMax": 12,
+  "for": "any",
+  "category": "Books",
+  "interests": [
+   "books",
+   "reading",
+   "funny stories"
+  ],
+  "search": "Diary of a Wimpy Kid book"
+ },
+ {
+  "id": "s-book-guinness-world-records-or-fact-book",
+  "name": "Book: Guinness World Records or fact book",
+  "description": "Big fact book to pore over.",
+  "price": 12,
+  "ageMin": 7,
+  "ageMax": 12,
+  "for": "any",
+  "category": "Books",
+  "interests": [
+   "books",
+   "facts",
+   "animals",
+   "space"
+  ],
+  "search": "Guinness World Records book"
+ },
+ {
+  "id": "s-book-minecraft-or-pok-mon-guide",
+  "name": "Book: Minecraft or Pokémon guide",
+  "description": "Official handbook for fans.",
+  "price": 10,
+  "ageMin": 6,
+  "ageMax": 12,
+  "for": "any",
+  "category": "Books",
+  "interests": [
+   "books",
+   "minecraft",
+   "pokemon",
+   "gaming"
+  ],
+  "search": "Pokemon handbook"
+ },
+ {
+  "id": "s-space-projector-torch-or-planets-kit",
+  "name": "Space projector torch or planets kit",
+  "description": "Star projector or glow-in-the-dark solar system.",
+  "price": 12,
+  "ageMin": 5,
+  "ageMax": 10,
+  "for": "any",
+  "category": "Science",
+  "interests": [
+   "space",
+   "planets",
+   "science",
+   "stars"
+  ],
+  "search": "glow in the dark solar system kit"
+ },
+ {
+  "id": "s-telescope-beginner",
+  "name": "Telescope (beginner)",
+  "description": "Simple kids telescope for the moon.",
+  "price": 25,
+  "ageMin": 7,
+  "ageMax": 12,
+  "for": "any",
+  "category": "Science",
+  "interests": [
+   "space",
+   "stars",
+   "science",
+   "astronomy"
+  ],
+  "search": "kids beginner telescope"
+ },
+ {
+  "id": "s-magnifying-glass-and-microscope-set",
+  "name": "Magnifying glass and microscope set",
+  "description": "Pocket microscope or explorer set.",
+  "price": 15,
+  "ageMin": 6,
+  "ageMax": 11,
+  "for": "any",
+  "category": "Science",
+  "interests": [
+   "science",
+   "nature",
+   "microscope"
+  ],
+  "search": "kids pocket microscope"
+ },
+ {
+  "id": "s-coding-robot-or-code-go-mouse",
+  "name": "Coding robot or Code & Go mouse",
+  "description": "Screen-free coding toy.",
+  "price": 25,
+  "ageMin": 5,
+  "ageMax": 9,
+  "for": "any",
+  "category": "Science",
+  "interests": [
+   "coding",
+   "robots",
+   "stem",
+   "technology"
+  ],
+  "search": "coding robot mouse kids"
+ },
+ {
+  "id": "s-reusable-water-bottle-with-name",
+  "name": "Reusable water bottle with name",
+  "description": "Personalised bottle in their favourite colours.",
+  "price": 10,
+  "ageMin": 4,
+  "ageMax": 12,
+  "for": "any",
+  "category": "Personalised",
+  "interests": [
+   "personalised",
+   "school",
+   "practical"
+  ],
+  "search": "personalised kids water bottle"
+ },
+ {
+  "id": "s-personalised-name-book-or-puzzle",
+  "name": "Personalised name book or puzzle",
+  "description": "Order a few days ahead.",
+  "price": 15,
+  "ageMin": 3,
+  "ageMax": 8,
+  "for": "any",
+  "category": "Personalised",
+  "interests": [
+   "personalised",
+   "books",
+   "puzzles"
+  ],
+  "search": "personalised kids name puzzle"
+ },
+ {
+  "id": "s-hair-accessories-set",
+  "name": "Hair accessories set",
+  "description": "Scrunchies, clips and bands in a gift box.",
+  "price": 8,
+  "ageMin": 4,
+  "ageMax": 10,
+  "for": "girl",
+  "category": "Fashion",
+  "interests": [
+   "hair",
+   "fashion",
+   "accessories"
+  ],
+  "search": "kids hair accessories set"
+ },
+ {
+  "id": "s-nail-art-makeup-free-beauty-kit",
+  "name": "Nail art / makeup-free beauty kit",
+  "description": "Peel-off nail polish and stickers.",
+  "price": 10,
+  "ageMin": 6,
+  "ageMax": 11,
+  "for": "girl",
+  "category": "Fashion",
+  "interests": [
+   "nail art",
+   "fashion",
+   "beauty",
+   "pamper"
+  ],
+  "search": "kids peel off nail polish set"
+ },
+ {
+  "id": "s-diary-with-lock",
+  "name": "Diary with lock",
+  "description": "Secret diary with key or code lock.",
+  "price": 10,
+  "ageMin": 6,
+  "ageMax": 11,
+  "for": "any",
+  "category": "Stationery",
+  "interests": [
+   "stationery",
+   "writing",
+   "secrets"
+  ],
+  "search": "kids lockable diary"
+ },
+ {
+  "id": "s-gel-pen-set",
+  "name": "Gel pen set",
+  "description": "Glitter and neon gel pens.",
+  "price": 8,
+  "ageMin": 6,
+  "ageMax": 12,
+  "for": "any",
+  "category": "Stationery",
+  "interests": [
+   "stationery",
+   "drawing",
+   "writing",
+   "art"
+  ],
+  "search": "gel pen set kids"
+ },
+ {
+  "id": "s-pencil-case-filled-with-stationery",
+  "name": "Pencil case filled with stationery",
+  "description": "Novelty pencil case with bits inside.",
+  "price": 10,
+  "ageMin": 5,
+  "ageMax": 11,
+  "for": "any",
+  "category": "Stationery",
+  "interests": [
+   "stationery",
+   "school"
+  ],
+  "search": "filled pencil case kids"
+ },
+ {
+  "id": "s-stretch-armstrong-or-squishy-figure",
+  "name": "Stretch Armstrong or squishy figure",
+  "description": "Stretchy, squishy action figure.",
+  "price": 12,
+  "ageMin": 5,
+  "ageMax": 10,
+  "for": "any",
+  "category": "Toys",
+  "interests": [
+   "squishies",
+   "superheroes"
+  ],
+  "search": "Stretch Armstrong mini"
+ },
+ {
+  "id": "s-tamagotchi-or-virtual-pet",
+  "name": "Tamagotchi or virtual pet",
+  "description": "The retro digital pet is back in fashion.",
+  "price": 20,
+  "ageMin": 7,
+  "ageMax": 12,
+  "for": "any",
+  "category": "Gadgets",
+  "interests": [
+   "virtual pets",
+   "gadgets",
+   "collecting"
+  ],
+  "search": "Tamagotchi"
+ },
+ {
+  "id": "s-kids-digital-camera",
+  "name": "Kids digital camera",
+  "description": "Simple kids camera.",
+  "price": 25,
+  "ageMin": 5,
+  "ageMax": 10,
+  "for": "any",
+  "category": "Gadgets",
+  "interests": [
+   "cameras",
+   "photography",
+   "gadgets"
+  ],
+  "search": "kids digital camera"
+ },
+ {
+  "id": "s-karaoke-microphone-bluetooth",
+  "name": "Karaoke microphone (Bluetooth)",
+  "description": "Wireless mic with speaker and lights.",
+  "price": 15,
+  "ageMin": 5,
+  "ageMax": 12,
+  "for": "any",
+  "category": "Gadgets",
+  "interests": [
+   "music",
+   "singing",
+   "karaoke"
+  ],
+  "search": "kids karaoke microphone bluetooth"
+ },
+ {
+  "id": "s-musical-instrument-ukulele-kazoo-set",
+  "name": "Musical instrument (ukulele, kazoo set)",
+  "description": "Beginner ukulele or a fun kazoo/harmonica set.",
+  "price": 20,
+  "ageMin": 5,
+  "ageMax": 12,
+  "for": "any",
+  "category": "Music",
+  "interests": [
+   "music",
+   "instruments",
+   "singing"
+  ],
+  "search": "kids ukulele"
+ },
+ {
+  "id": "s-disco-ball-light-or-night-light",
+  "name": "Disco ball light or night light",
+  "description": "Colour-changing night light or mini disco ball.",
+  "price": 10,
+  "ageMin": 4,
+  "ageMax": 10,
+  "for": "any",
+  "category": "Bedroom",
+  "interests": [
+   "bedroom",
+   "lights",
+   "music",
+   "disco"
+  ],
+  "search": "kids colour changing night light"
+ },
+ {
+  "id": "s-football-club-kit-item",
+  "name": "Football club kit item",
+  "description": "Club socks, scarf or hat. Check which team!",
+  "price": 20,
+  "ageMin": 5,
+  "ageMax": 12,
+  "for": "any",
+  "category": "Sport",
+  "interests": [
+   "football",
+   "sport",
+   "club"
+  ],
+  "search": "kids football scarf"
+ },
+ {
+  "id": "s-swim-goggles-and-dive-toys",
+  "name": "Swim goggles and dive toys",
+  "description": "Fun goggles with dive rings or sticks.",
+  "price": 10,
+  "ageMin": 5,
+  "ageMax": 10,
+  "for": "any",
+  "category": "Sport",
+  "interests": [
+   "swimming",
+   "water",
+   "summer"
+  ],
+  "search": "kids swimming goggles dive toys"
+ },
+ {
+  "id": "s-scooter-accessories-lights-bell",
+  "name": "Scooter accessories (lights, bell)",
+  "description": "Light-up wheels, streamers, bell or bag.",
+  "price": 10,
+  "ageMin": 4,
+  "ageMax": 9,
+  "for": "any",
+  "category": "Outdoors",
+  "interests": [
+   "scooters",
+   "bikes",
+   "outdoors"
+  ],
+  "search": "scooter light up accessories"
+ },
+ {
+  "id": "s-cookie-or-cupcake-baking-kit",
+  "name": "Cookie or cupcake baking kit",
+  "description": "Kids baking set with cutters and recipes.",
+  "price": 12,
+  "ageMin": 5,
+  "ageMax": 11,
+  "for": "any",
+  "category": "Cooking",
+  "interests": [
+   "baking",
+   "cooking",
+   "cakes"
+  ],
+  "search": "kids baking set"
+ },
+ {
+  "id": "s-gift-card-book-or-toy-shop",
+  "name": "Gift card (book or toy shop)",
+  "description": "When you're stuck. Waterstones, Smyths or similar.",
+  "price": 10,
+  "ageMin": 5,
+  "ageMax": 12,
+  "for": "any",
+  "category": "Gift cards",
+  "interests": [
+   "books",
+   "any"
+  ],
+  "search": "Waterstones gift card"
+ },
+ {
+  "id": "s-experience-voucher-cinema-soft-play",
+  "name": "Experience voucher (cinema, soft play)",
+  "description": "Two cinema or soft-play tickets in a card.",
+  "price": 15,
+  "ageMin": 4,
+  "ageMax": 12,
+  "for": "any",
+  "category": "Gift cards",
+  "interests": [
+   "experiences",
+   "cinema",
+   "days out"
+  ],
+  "search": "kids cinema gift card"
+ },
+ {
+  "id": "s-craft-box-pom-poms-pipe-cleaners-googly-",
+  "name": "Craft box (pom-poms, pipe cleaners, googly eyes)",
+  "description": "Big box of craft bits for making anything.",
+  "price": 10,
+  "ageMin": 4,
+  "ageMax": 9,
+  "for": "any",
+  "category": "Arts & crafts",
+  "interests": [
+   "crafts",
+   "art",
+   "making"
+  ],
+  "search": "kids craft box bumper"
+ },
+ {
+  "id": "s-gem-art-diamond-painting-kit",
+  "name": "Gem art / diamond painting kit",
+  "description": "Sparkly stick-on gem pictures.",
+  "price": 10,
+  "ageMin": 6,
+  "ageMax": 12,
+  "for": "any",
+  "category": "Arts & crafts",
+  "interests": [
+   "crafts",
+   "art",
+   "sparkles",
+   "gems"
+  ],
+  "search": "kids diamond painting kit"
+ },
+ {
+  "id": "s-mini-brands-or-blind-bag-collectables",
+  "name": "Mini Brands or blind-bag collectables",
+  "description": "Surprise collectable capsules.",
+  "price": 8,
+  "ageMin": 5,
+  "ageMax": 11,
+  "for": "any",
+  "category": "Collecting",
+  "interests": [
+   "collecting",
+   "surprise",
+   "blind bags"
+  ],
+  "search": "Mini Brands capsule"
+ },
+ {
+  "id": "s-pencil-sharpener-desk-gadget-novelty",
+  "name": "Pencil sharpener / desk gadget novelty",
+  "description": "Something silly for the pencil case.",
+  "price": 6,
+  "ageMin": 5,
+  "ageMax": 10,
+  "for": "any",
+  "category": "Stationery",
+  "interests": [
+   "stationery",
+   "school",
+   "funny"
+  ],
+  "search": "novelty pencil sharpener"
+ },
+ {
+  "id": "s-glow-sticks-and-party-bag-fillers-mega-p",
+  "name": "Glow sticks and party bag fillers mega pack",
+  "description": "A cheap add-on for a joint present.",
+  "price": 6,
+  "ageMin": 4,
+  "ageMax": 10,
+  "for": "any",
+  "category": "Toys",
+  "interests": [
+   "glow sticks",
+   "party"
+  ],
+  "search": "glow sticks pack"
+ },
+ {
+  "id": "s-card-game-sleeping-queens",
+  "name": "Card game: Sleeping Queens",
+  "description": "Clever, short card game invented by a 6-year-old.",
+  "price": 12,
+  "ageMin": 6,
+  "ageMax": 10,
+  "for": "any",
+  "category": "Games",
+  "interests": [
+   "card games",
+   "games",
+   "queens",
+   "family"
+  ],
+  "search": "Sleeping Queens card game"
+ },
+ {
+  "id": "s-horse-riding-pony-gift-set",
+  "name": "Horse riding / pony gift set",
+  "description": "Pony figure with grooming set.",
+  "price": 15,
+  "ageMin": 5,
+  "ageMax": 11,
+  "for": "girl",
+  "category": "Toys",
+  "interests": [
+   "horses",
+   "ponies",
+   "animals"
+  ],
+  "search": "kids horse grooming set toy"
+ },
+ {
+  "id": "s-racing-track-car-set-scalextric-junior",
+  "name": "Racing track car set (Scalextric junior)",
+  "description": "Small battery race set.",
+  "price": 25,
+  "ageMin": 5,
+  "ageMax": 10,
+  "for": "any",
+  "category": "Toys",
+  "interests": [
+   "cars",
+   "racing",
+   "motor racing"
+  ],
+  "search": "Micro Scalextric"
+ },
+ {
+  "id": "s-minecraft-figures-or-plush",
+  "name": "Minecraft figures or plush",
+  "description": "Creeper plush or figure pack.",
+  "price": 12,
+  "ageMin": 6,
+  "ageMax": 11,
+  "for": "any",
+  "category": "Toys",
+  "interests": [
+   "minecraft",
+   "gaming"
+  ],
+  "search": "Minecraft plush"
+ },
+ {
+  "id": "s-sonic-or-mario-figure",
+  "name": "Sonic or Mario figure",
+  "description": "Nintendo / Sonic figures or plush.",
+  "price": 12,
+  "ageMin": 5,
+  "ageMax": 11,
+  "for": "any",
+  "category": "Toys",
+  "interests": [
+   "mario",
+   "sonic",
+   "gaming",
+   "nintendo"
+  ],
+  "search": "Super Mario figure"
+ },
+ {
+  "id": "s-roblox-toy-or-gift-card",
+  "name": "Roblox toy or gift card",
+  "description": "Roblox figure, or a gift card if parents allow.",
+  "price": 12,
+  "ageMin": 7,
+  "ageMax": 12,
+  "for": "any",
+  "category": "Gaming",
+  "interests": [
+   "roblox",
+   "gaming"
+  ],
+  "search": "Roblox gift card"
+ }
+]
