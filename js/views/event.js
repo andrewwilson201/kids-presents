@@ -1,11 +1,13 @@
 // One party: the details, whether you're going, and the present: real products
 // Claude found in the shops, ideas, who's getting it, bought, wrapped. Claiming a present is a transaction (store.js
-// claimPresent), so you can't both end up buying one.
-import * as S from '../store.js?v=3';
-import { matchIdeas, pastPresents, ageOn, childrenFor, fmt12, shopLinks, needsPresent, presentSorted, daysBetween, isDay } from '../gifts.js?v=3';
-import { icon, childBadge } from '../ui.js?v=3';
-import { st, esc, head, section, run, toast, money, fmtLong, fmtDay, today, routes, actions, arg, render, busy, failed, keep, hostOf } from '../core.js?v=3';
-import { children, eventTitle, partyTitle, sibs, whenWords, presentChip, budgetOf, firstName, priceText } from '../events.js?v=3';
+// claimPresent), so you can't both end up buying one. Your own choice can be the
+// exact thing: paste its shop link and the name, price and picture fill in. What
+// you buy is saved to the ideas, so it's there to suggest next time.
+import * as S from '../store.js?v=4';
+import { matchIdeas, pastPresents, ageOn, childrenFor, fmt12, shopLinks, needsPresent, presentSorted, daysBetween, isDay, nameKey } from '../gifts.js?v=4';
+import { icon, childBadge, thumb } from '../ui.js?v=4';
+import { st, esc, head, section, run, toast, money, fmtLong, fmtDay, today, routes, actions, arg, route, hooks, render, busy, failed, keep, hostOf } from '../core.js?v=4';
+import { children, eventTitle, partyTitle, sibs, whenWords, presentChip, budgetOf, firstName, priceText } from '../events.js?v=4';
 
 const ev = () => st.events.find(x => x.id === arg);
 
@@ -58,6 +60,65 @@ routes.event = () => {
       <button class="btn outline block danger" data-act="deleteEvent">${icon('trash')} Delete this party</button></div></details>`;
 };
 
+// ---------- the exact present, from a shop link ----------
+// Pasting a link into a present form asks the functions what it is (an ask of
+// kind 'link': functions/link.mjs), and the answer fills in the name and price.
+const urlIn = s => String(s || '').match(/https:\/\/[^\s<>"']+/)?.[0] || '';
+const linkAsk = e => st.asks.find(a => a.kind === 'link' && a.eventId === e.id && a.url === urlIn(keep['own.url']));
+const linkInfo = e => { const a = linkAsk(e); return a?.state === 'done' ? a.product : null; };
+const linkBox = () => `<input type="text" name="url" inputmode="url" autocapitalize="off" autocomplete="off" placeholder="Paste a link from a shop (optional)" aria-label="Link to it in a shop" data-keep="own.url">`;
+function linkStatus(e) {
+  const a = linkAsk(e);
+  if (busy(a)) return '<p class="small muted link-status"><span class="spinner"></span> Reading the link…</p>';
+  if (failed(a)) return `<p class="small muted link-status">Couldn't read that link (${esc(a.message || 'it took too long')}). Type what it is; the link is still kept.</p>`;
+  if (a?.product) return `<p class="small muted link-status row nowrap">${thumb(a.product.image)}<span class="grow">Found at ${esc(a.product.shop)}. Check the name and price are right.</span></p>`;
+  return '';
+}
+let linkTimer = null;
+document.addEventListener('input', ev2 => {
+  const el = ev2.target;
+  if (!el.matches?.('.present input[name=url]')) return;
+  clearTimeout(linkTimer);
+  const url = urlIn(el.value), id = arg;
+  if (!/^https:\/\/[^\s/]+\.[^\s/]+\/\S+/.test(url)) return;
+  linkTimer = setTimeout(() => {
+    if (route !== 'event' || arg !== id || st.asks.some(a => a.kind === 'link' && a.eventId === id && a.url === url)) return;
+    run(() => S.addH(['asks'], { kind: 'link', url, eventId: id, state: 'requested', by: S.me(), createdAt: S.serverTimestamp() }));
+  }, 700);
+});
+// When the answer arrives, put it in the form (once), still editable.
+const applied = new Set();
+hooks.rendered.push(() => {
+  const e = route === 'event' ? ev() : null; const a = e && linkAsk(e);
+  if (a?.state !== 'done' || !a.product || applied.has(a.id)) return;
+  applied.add(a.id);
+  keep['own.name'] = a.product.title;
+  if (a.product.price) keep['own.price'] = String(a.product.price);
+});
+// What a present form says the present is: { name, price, url, shop, image }.
+function formPresent(f, e, was = {}) {
+  const url = was.url || urlIn(f.url?.value);
+  const info = linkInfo(e);
+  return { name: (f.name?.value || '').trim().slice(0, 120) || was.name || '', price: Number(f.price.value) || was.price || null,
+    ...(url ? { url, shop: was.shop || info?.shop || hostOf(url), image: was.image || info?.image || '' } : {}) };
+}
+// Bought: claim it, and keep it in the ideas so it's there to suggest another time.
+const buy = present => run(async () => {
+  const e = ev();
+  const idea = present.ideaId ? st.ideas.find(i => i.id === present.ideaId) : st.ideas.find(i => (present.url && i.url === present.url) || nameKey(i.name) === nameKey(present.name));
+  const ideaId = idea?.id || S.newId('ideas');
+  try { await S.claimPresent(arg, { ...present, state: 'bought', ideaId }); }
+  catch (err) { if (err.code === 'claimed') { toast(err.message); return; } throw err; }
+  const link = present.url ? { url: present.url, shop: present.shop || '', image: present.image || '' } : {};
+  if (idea) await S.updateH(['ideas', idea.id], { given: (idea.given || 0) + 1, lastGiven: today(), ...(idea.url ? {} : link) });
+  else {
+    const q = queryFor(e);
+    await S.setH(['ideas', ideaId], { name: present.name, price: present.price || null, ...link, ageMin: q.age ? Math.max(1, q.age - 2) : null, ageMax: q.age ? q.age + 2 : null, for: q.gender || 'any',
+      interests: String(e.interests || '').split(',').map(x => x.trim().toLowerCase()).filter(Boolean).slice(0, 6), category: 'Bought before', source: 'bought', given: 1, lastGiven: today(), by: S.me(), createdAt: S.serverTimestamp() }, false);
+  }
+  toast(idea ? 'Bought. Nice one.' : 'Bought. Saved to your ideas for next time.');
+});
+
 const shopChips = name => `<div class="row shops"><span class="small muted">Search for it:</span>${shopLinks(name).map(l => `<a class="chip link" href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.name)} ${icon('external')}</a>`).join('')}</div>`;
 const productLink = p => (safeUrl(p.url) ? `<a class="btn small tonal" href="${esc(p.url)}" target="_blank" rel="noopener">${icon('external')} Open at ${esc(p.shop || hostOf(p.url))}</a>` : '');
 
@@ -67,16 +128,22 @@ function presentCard(e, days, title) {
   const by = p.by?.name ? firstName(p.by.name) : 'Someone';
   if (!needsPresent(e)) return `<div class="card soft">${presentChip(e)}</div>`;
   if (p.state === 'bought' || p.state === 'wrapped') {
-    return `${section(title)}<div class="card present done"><div class="row nowrap" style="gap:12px"><span class="tile veg">${icon('gift')}</span>
+    return `${section(title)}<div class="card present done"><div class="row nowrap" style="gap:12px">${thumb(p.image) || `<span class="tile veg">${icon('gift')}</span>`}
       <span class="grow"><b>${esc(p.name || 'A present')}</b><br><span class="small muted">Bought by ${mine ? 'you' : esc(by)}${p.price ? `, ${money(p.price)}` : ''}${p.where ? ` from ${esc(p.where)}` : ''}${p.cupboardId ? ' (from the cupboard)' : ''}</span></span></div>
+      ${safeUrl(p.url) ? `<div class="row shops">${productLink(p)}</div>` : ''}
       <div class="checks"><label class="row nowrap"><input type="checkbox" class="check" data-change="wrapped" ${p.state === 'wrapped' ? 'checked' : ''}> Wrapped, with a card</label></div>
       <button class="btn ghost small" data-act="undoPresent">Undo</button></div>`;
   }
   if (p.state === 'chosen') {
-    return `${section(title)}<div class="card present chosen"><div class="row nowrap" style="gap:12px"><span class="tile other">${icon('bag')}</span>
+    return `${section(title)}<div class="card present chosen"><div class="row nowrap" style="gap:12px">${thumb(p.image) || `<span class="tile other">${icon('bag')}</span>`}
       <span class="grow"><b>${esc(p.name || 'A present')}</b><br><span class="small muted">${mine ? 'You said you\'d get this' : `${esc(by)} is getting this`}${p.price ? `, about ${money(p.price)}` : ''}</span></span></div>
       ${safeUrl(p.url) ? `<div class="row shops">${productLink(p)}</div>` : mine ? shopChips(p.name || '') : ''}
-      ${mine ? `<form data-form="bought" class="row bought-form"><input type="text" name="where" placeholder="Where from (optional)" aria-label="Where from" data-keep="where" value="${esc(p.shop || '')}"><input type="number" name="price" placeholder="£" aria-label="Price" inputmode="decimal" step="any" style="max-width:90px" value="${esc(p.price || '')}"><button class="btn primary">${icon('check')} Bought it</button></form>
+      ${mine ? `<form data-form="bought" class="stack bought-form">
+        <label class="field">When you've bought it<span class="hint">${p.url ? 'Change the name if you got something different.' : 'Make it exact if you like: paste its link and the name and price fill in.'}</span>
+        <input type="text" name="name" aria-label="What it is" data-keep="own.name" value="${esc(p.name || '')}"></label>
+        ${p.url ? '' : `${linkBox()}${linkStatus(e)}`}
+        <div class="row nowrap"><input type="text" name="where" placeholder="Where from" aria-label="Where from" data-keep="where" value="${esc(p.shop || '')}"><input type="number" name="price" placeholder="£" aria-label="Price" inputmode="decimal" step="any" style="max-width:90px" data-keep="own.price" value="${esc(p.price || '')}"></div>
+        <button class="btn primary">${icon('check')} Bought it</button></form>
         <button class="btn ghost small" data-act="undoPresent">Change my mind</button>`
         : `<div class="row"><button class="btn ghost small" data-act="takeOver">I'll get it instead</button></div>`}</div>`;
   }
@@ -100,8 +167,9 @@ function presentCard(e, days, title) {
     <p class="small" style="margin:0 0 6px"><b>Ideas</b></p>
     <ul class="list compact ideas types">${ideas.map(i => `<li><span class="grow"><span class="name">${esc(i.name)}</span><span class="meta">${esc([priceText(i), i.description].filter(Boolean).join(' · '))}</span></span><button class="btn small tonal" data-act="chooseIdea" data-id="${esc(i.id)}">I'll get this</button></li>`).join('') || '<li class="muted small">No saved ideas fit. Try a bigger budget.</li>'}</ul>
     <div class="row" style="margin:10px 0 14px"><a class="btn outline" href="#/ideas/${esc(e.id)}">${icon('gift')} More ideas</a></div>
-    <form data-form="ownPresent" class="own"><label class="field">Or something else<span class="hint">Say what you'll get, so the other person knows.</span>
-      <div class="row nowrap"><input type="text" name="name" placeholder="A Lego set" required data-keep="own.name"><input type="number" name="price" placeholder="£" inputmode="decimal" step="any" style="max-width:80px" data-keep="own.price"></div></label>
+    <form data-form="ownPresent" class="own stack"><label class="field">Or something else<span class="hint">Paste a link to the exact thing and its name and price fill in. Or just type what it is.</span>
+      ${linkBox()}</label>${linkStatus(e)}
+      <div class="row nowrap"><input type="text" name="name" placeholder="A Lego set" aria-label="What it is" required data-keep="own.name"><input type="number" name="price" placeholder="£" aria-label="Price" inputmode="decimal" step="any" style="max-width:80px" data-keep="own.price"></div>
       <div class="row"><button class="btn tonal" name="how" value="chosen">I'll get this</button><button class="btn ghost" name="how" value="bought">Already bought it</button></div></form>
   </div>`;
 }
@@ -120,21 +188,22 @@ const claim = (present, done) => run(async () => {
 });
 actions.chooseIdea = el => {
   const i = st.ideas.find(x => x.id === el.dataset.id); if (!i) return;
-  claim({ state: 'chosen', name: i.name, ideaId: i.id, price: i.price || null }, 'Noted. You\'re getting it.');
+  claim({ state: 'chosen', name: i.name, ideaId: i.id, price: i.price || null, ...(i.url ? { url: i.url, shop: i.shop || '', image: i.image || '' } : {}) }, 'Noted. You\'re getting it.');
 };
 actions.chooseProduct = el => {
   const x = ev()?.products?.items?.[Number(el.dataset.id)]; if (!x) return;
   claim({ state: 'chosen', name: x.title, ideaId: null, price: x.price || null, url: safeUrl(x.url), shop: x.shop || '' }, 'Noted. You\'re getting it.');
 };
 actions.ownPresent = (f, e) => {
-  const name = f.name.value.trim().slice(0, 120); if (!name) return;
-  const how = e.submitter?.value || 'chosen';
-  claim({ state: how, name, ideaId: null, price: Number(f.price.value) || null }, how === 'bought' ? 'Marked as bought' : 'Noted. You\'re getting it.');
+  const present = formPresent(f, ev()); if (!present.name) return;
+  if (e.submitter?.value === 'bought') buy(present);
+  else claim({ state: 'chosen', ideaId: null, ...present }, 'Noted. You\'re getting it.');
 };
 actions.bought = f => {
-  const e = ev(); const p = e?.present || {};
-  claim({ state: 'bought', where: f.where.value.trim().slice(0, 60), price: Number(f.price.value) || p.price || null }, 'Bought. Nice one.');
-  if (p.ideaId) { const i = st.ideas.find(x => x.id === p.ideaId); if (i) S.updateH(['ideas', i.id], { given: (i.given || 0) + 1, lastGiven: today() }).catch(() => {}); }
+  const p = ev()?.present || {};
+  const present = formPresent(f, ev(), p);
+  // A different thing from the idea that was picked is its own entry in the ideas.
+  buy({ ...present, where: f.where.value.trim().slice(0, 60), ideaId: p.ideaId && nameKey(present.name) === nameKey(p.name) ? p.ideaId : null });
 };
 actions.takeOver = () => { if (confirm('Take this over? They\'ll see that you\'re getting it now.')) claim({ state: 'chosen', takeOver: true }, 'You\'re getting it now'); };
 actions.wrapped = el => claim({ state: el.checked ? 'wrapped' : 'bought' });

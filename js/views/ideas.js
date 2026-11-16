@@ -2,12 +2,12 @@
 // interests; ask Claude for fresh ones (they're saved here too); like the good
 // ones, hide the duds, add your own. The present cupboard sits beside it (js/views/cupboard.js). From a party (#/ideas/{eventId}) the
 // filters start from that party and picking an idea sets it as the present.
-import * as S from '../store.js?v=3';
-import { matchIdeas, shopLinks, searchFor, pastPresents } from '../gifts.js?v=3';
-import { icon } from '../ui.js?v=3';
-import { st, esc, head, section, run, toast, money, empty, plural, routes, actions, arg, render, keep, hooks, busy, failed } from '../core.js?v=3';
-import { eventTitle, firstName, children, priceText } from '../events.js?v=3';
-import { queryFor, findProducts } from './event.js?v=3';
+import * as S from '../store.js?v=4';
+import { matchIdeas, shopLinks, searchFor, pastPresents } from '../gifts.js?v=4';
+import { icon, thumb } from '../ui.js?v=4';
+import { st, esc, head, section, run, toast, money, empty, plural, routes, actions, arg, render, keep, hooks, busy, failed } from '../core.js?v=4';
+import { eventTitle, firstName, children, priceText } from '../events.js?v=4';
+import { queryFor, findProducts } from './event.js?v=4';
 
 const BUDGETS = [5, 10, 15, 20, 25, 30];
 let filters = null, filtersFor = null, showAll = false;
@@ -26,11 +26,11 @@ hooks.leave.push(() => { filtersFor = null; showAll = false; });
 const ageLabel = i => (i.ageMin != null || i.ageMax != null ? `${i.ageMin ?? 3}–${i.ageMax ?? 12} yrs` : '');
 function ideaRow(i, e, why = '') {
   return `<li class="idea" data-name="${esc(`${i.name} ${(i.interests || []).join(' ')} ${i.category || ''}`.toLowerCase())}">
-    <span class="grow"><span class="name">${esc(i.name)}${i.liked ? ` <span class="liked">${icon('heart')}</span>` : ''}${i.source === 'claude' ? ' <span class="chip new tiny-chip">Claude</span>' : ''}</span>
+    ${thumb(i.image, 'sm')}<span class="grow"><span class="name">${esc(i.name)}${i.liked ? ` <span class="liked">${icon('heart')}</span>` : ''}${i.source === 'claude' ? ' <span class="chip new tiny-chip">Claude</span>' : ''}${i.source === 'bought' ? ' <span class="chip ok tiny-chip">Bought before</span>' : ''}</span>
       <span class="meta">${esc([priceText(i), ageLabel(i), i.for && i.for !== 'any' ? `${i.for}s` : ''].filter(Boolean).join(' · '))}</span>
       ${why || i.description ? `<span class="meta desc">${esc(why || i.description)}</span>` : ''}
       <details class="mini shops"><summary>Shops, like, hide</summary>
-        <div class="row">${shopLinks(searchFor(i)).map(l => `<a class="chip link" href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.name)} ${icon('external')}</a>`).join('')}</div>
+        <div class="row">${/^https:\/\//.test(i.url || '') ? `<a class="chip link" href="${esc(i.url)}" target="_blank" rel="noopener">The one you bought${i.shop ? `, at ${esc(i.shop)}` : ''} ${icon('external')}</a>` : ''}${shopLinks(searchFor(i)).map(l => `<a class="chip link" href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.name)} ${icon('external')}</a>`).join('')}</div>
         <div class="row" style="margin-top:8px">${e ? `<button class="btn small tonal" data-act="findLike" data-id="${esc(i.id)}">${icon('search')} Find real ones in the shops</button>` : ''}<button class="btn small ghost" data-act="likeIdea" data-id="${esc(i.id)}">${icon('heart')} ${i.liked ? 'Unlike' : 'Like'}</button>
         <button class="btn small ghost" data-act="toCupboard" data-id="${esc(i.id)}">${icon('box')} Bought one for the cupboard</button>
         <button class="btn small ghost danger" data-act="hideIdea" data-id="${esc(i.id)}">Hide</button></div></details></span>
@@ -42,7 +42,7 @@ routes.ideas = () => {
   const sorted = e && ['chosen', 'bought', 'wrapped'].includes(e.present?.state);
   const given = new Set(e ? pastPresents(st.events, e.friend, e.id, null, e.child).map(p => p.ideaId).filter(Boolean) : []);
   const list = matchIdeas(st.ideas, f, { limit: 60, given });
-  const ask = st.asks.find(a => a.kind !== 'products' && (e ? a.eventId === e.id : !a.eventId));
+  const ask = st.asks.find(a => (a.kind || 'ideas') === 'ideas' && (e ? a.eventId === e.id : !a.eventId));
   const budgets = [...new Set([...BUDGETS, Number(f.budget) || 15])].sort((x, y) => x - y);
   const free = st.cupboard.filter(c => !c.usedFor).length;
   const byId = new Map(st.ideas.map(i => [i.id, i]));
@@ -89,7 +89,7 @@ actions.askIdeas = () => {
 actions.pickForEvent = el => {
   const i = st.ideas.find(x => x.id === el.dataset.id); if (!i) return;
   run(async () => {
-    try { await S.claimPresent(arg, { state: 'chosen', name: i.name, ideaId: i.id, price: i.price || null }); }
+    try { await S.claimPresent(arg, { state: 'chosen', name: i.name, ideaId: i.id, price: i.price || null, ...(i.url ? { url: i.url, shop: i.shop || '', image: i.image || '' } : {}) }); }
     catch (err) { if (err.code === 'claimed') { toast(err.message); return; } throw err; }
     location.hash = `#/event/${arg}`;
   }, 'Noted. You\'re getting it.');

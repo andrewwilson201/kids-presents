@@ -102,7 +102,7 @@ await a.waitForSelector('text=Sarah is getting this');
 await shot(a, '06-andrew-sees-sarah');
 const ev = (await H.collection('events').get()).docs[0];
 const clash = await a.evaluate(async id => {
-  const S = await import('/js/store.js?v=3');
+  const S = await import('/js/store.js?v=4');
   try { await S.claimPresent(id, { state: 'chosen', name: 'Something else' }); return 'claimed'; } catch (e) { return e.code; }
 }, ev.id);
 assert.equal(clash, 'claimed', 'a second claim is refused');
@@ -227,6 +227,32 @@ assert.equal(await processScan(await H.get(), textScan.ref), newId, 'points at t
 assert.equal((await textScan.ref.get()).data().duplicate, true);
 await b.waitForSelector('h1:has-text("Olivia\'s 7th birthday party")');
 assert.equal((await H.collection('events').count().get()).data().count, before, 'no second party');
+
+// 9c2. Your own idea, as the exact thing: paste its link, and it's kept in the ideas.
+step('An exact present from a pasted shop link, saved to the ideas');
+const ben = await H.collection('events').add({ kind: 'party', child: 'charlie', friend: 'Ben', friendAge: 7, friendGender: 'boy', interests: 'Lego, police', date: addDays(today, 30) });
+await a.goto(`${SITE}?emulator#/event/${ben.id}`);
+await a.fill('.own input[name=url]', 'Look at this! https://www.argos.co.uk/product/9876543?clickSR=1');
+await a.waitForSelector('text=Reading the link');
+const linkAsk = (await asks('link'))[0];
+assert.equal(linkAsk.data().url, 'https://www.argos.co.uk/product/9876543?clickSR=1');
+await processAsk(await H.get(), linkAsk.ref);
+await a.waitForSelector('text=Found at Argos');
+assert.equal(await a.inputValue('.own input[name=name]'), 'LEGO City Police Car 60312');
+assert.equal(await a.inputValue('.own input[name=price]'), '8.99');
+await shot(a, '11e2-link-read');
+await a.click('button:has-text("Already bought it")');
+await a.waitForSelector('text=Bought by you');
+await a.waitForSelector('a:has-text("Open at Argos")');
+await a.waitForTimeout(400);
+const benNow = (await ben.get()).data();
+const kept = (await H.collection('ideas').doc(benNow.present.ideaId).get()).data();
+assert.deepEqual([kept.name, kept.price, kept.url, kept.source, kept.given, kept.for, kept.ageMin, kept.ageMax], ['LEGO City Police Car 60312', 8.99, 'https://www.argos.co.uk/product/9876543?clickSR=1', 'bought', 1, 'boy', 5, 9]);
+await shot(a, '11e3-bought-exact');
+await a.goto(`${SITE}?emulator#/ideas`);
+await a.fill('input[name=interests]', 'police');
+await a.press('input[name=interests]', 'Enter');
+await a.waitForSelector('.idea:has-text("LEGO City Police Car 60312") >> text=Bought before');
 
 // 9d. Friends, and a birthday coming round again.
 step('Friends remembered, and a birthday coming round again');

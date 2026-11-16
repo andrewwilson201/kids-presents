@@ -5,9 +5,9 @@
 // and the readInvite function has Claude read it and add the party (needsCheck,
 // so you look it over). If that party is already in the calendar it isn't added
 // twice. This screen shows the progress and opens the party.
-import * as S from '../store.js?v=3';
-import { icon } from '../ui.js?v=3';
-import { st, esc, head, run, toast, render, routes, actions, hooks, route, busy, failed, keep } from '../core.js?v=3';
+import * as S from '../store.js?v=4';
+import { icon } from '../ui.js?v=4';
+import { st, esc, head, run, toast, render, routes, actions, hooks, route, busy, failed, keep } from '../core.js?v=4';
 
 // Make the picture small enough for the database (a document holds up to 1 MB).
 export async function compress(file, maxSide = 1600) {

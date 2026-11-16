@@ -2,10 +2,10 @@
 // from year to year: what they're into, how old they are now, and what we've
 // given them. Worked out from the parties (js/gifts.js friendsFrom), so
 // there's nothing to keep up to date by hand.
-import { turningOn, isDay } from '../gifts.js?v=3';
-import { icon, childBadge } from '../ui.js?v=3';
-import { esc, head, section, empty, today, fmtDay, plural, routes, keep } from '../core.js?v=3';
-import { children, friends, whenWords } from '../events.js?v=3';
+import { turningOn, isDay } from '../gifts.js?v=4';
+import { icon, childBadge } from '../ui.js?v=4';
+import { esc, head, section, empty, today, fmtDay, plural, routes, keep } from '../core.js?v=4';
+import { children, friends, whenWords } from '../events.js?v=4';
 
 const longDay = d => fmtDay(d, { day: 'numeric', month: 'long', year: 'numeric' });
 function friendRow(f) {

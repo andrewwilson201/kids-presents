@@ -67,3 +67,6 @@ export const childBadge = (children, id) => {
   const name = id === 'both' ? (children || []).map(c => c.name).join(' & ') : (children || []).find(c => c.id === id)?.name || id;
   return `<span class="kid ${childColour(children, id)}">${String(name).replace(/[<>"]/g, '').replace(/&/g, '&amp;')}</span>`;
 };
+
+// A product's picture from its shop (only ever an https address; it vanishes if the shop won't serve it).
+export const thumb = (src, cls = '') => (/^https:\/\/[^\s"'<>]+$/.test(src || '') ? `<img class="thumb${cls ? ` ${cls}` : ''}" src="${src}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">` : '');

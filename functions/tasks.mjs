@@ -2,6 +2,7 @@
 // Firebase triggers) so the tests can call it directly against the emulator.
 import { readInvite, suggestIdeas, findProducts } from './claude.mjs';
 import { notify } from './notify.mjs';
+import { readProductLink } from './link.mjs';
 import { households } from './access.mjs';
 import { iso, addDays, eventsFromInvite, dueReminders, pastPresents, DEFAULT_REMINDERS, isDay, daysBetween, groupEvents, jointDayOf, joinNames, findDuplicate, friendsFrom, samePerson, turningOn } from './shared/gifts.js';
 
@@ -87,13 +88,20 @@ export async function processScan(h, ref, now = new Date()) {
   }
 }
 
-// "Ask Claude". For ideas (kinds of present): new ones join the household's
+// "Ask Claude". For a link (kind: 'link'): the product a pasted shop link points
+// at (functions/link.mjs). For ideas (kinds of present): new ones join the household's
 // ideas, so they're there next time. For products (kind: 'products'): real
 // things in the shops today, saved on the party so you both see them.
 export async function processAsk(h, ref, now = new Date()) {
   if (!(await claim(ref))) return null;
   const a = (await ref.get()).data();
   try {
+    // A pasted shop link: what is it, and what does it cost?
+    if (a.kind === 'link') {
+      const product = await readProductLink(a.url);
+      await ref.update({ state: 'done', product, doneAt: now });
+      return product;
+    }
     let given = [];
     if (a.friend) {
       const events = (await h.ref.collection('events').get()).docs.map(d => ({ id: d.id, ...d.data() }));

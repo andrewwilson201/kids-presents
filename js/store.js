@@ -8,14 +8,14 @@
 //                                        budget, reminders{first,second,dayOf}, feedKey, friendSnooze{key:year}, createdAt }
 //   households/{hid}/events/{id}       a party or a birthday: { kind, child, friend, friendAge, friendGender, interests, date, start, end,
 //                                        venue, address, rsvpBy, rsvp, contact, theme, notes, budget, card, cancelled, needsCheck, scanId,
-//                                        present{state: chosen|bought|wrapped, name, ideaId, price, where, url, shop, cupboardId, by{uid,name}, at}, reminded{},
+//                                        present{state: chosen|bought|wrapped, name, ideaId, price, where, url, shop, image, cupboardId, by{uid,name}, at}, reminded{},
 //                                        products{at, items[{title, price, shop, url, why}]} real products Claude found in the shops }
 //                                      a joint party is one event per birthday child, sharing groupId (+ groupOrder): js/gifts.js
-//   households/{hid}/ideas/{id}        present ideas: { name, description, price, ageMin, ageMax, for, interests[], category, search, source, given, liked, hidden }
+//   households/{hid}/ideas/{id}        present ideas: { name, description, price, ageMin, ageMax, for, interests[], category, search, source: starter|claude|us|bought, url, shop, image, given, liked, hidden }
 //   households/{hid}/cupboard/{id}     presents bought ahead: { name, price, ageMin, ageMax, for, notes, by, usedFor, createdAt }
 //   households/{hid}/scans/{id}        an invite for Claude to read: { text?, state: requested|done|failed, by, eventId, duplicate, message }
 //   households/{hid}/scanImages/{id}   the invite's picture, same id as its scan: { image (data URL) }
-//   households/{hid}/asks/{id}         "Ask Claude": { kind: ideas|products, budget, gender, age, interests, hint, eventId, state, ideas[] | products[], by }
+//   households/{hid}/asks/{id}         "Ask Claude": { kind: ideas|products|link, budget, gender, age, interests, hint, url, eventId, state, ideas[] | products[] | product{}, by }
 //   households/{hid}/devices/{id}      phones that get notifications: { token, uid, name, ua, createdAt }
 
 import {
@@ -91,7 +91,7 @@ function watchHousehold(hid) {
   unsubs.push(coll('ideas', 'ideas'));
   unsubs.push(coll('cupboard', 'cupboard'));
   unsubs.push(coll('scans', 'scans', orderBy('createdAt', 'desc'), limit(5)));
-  unsubs.push(coll('asks', 'asks', orderBy('createdAt', 'desc'), limit(5)));
+  unsubs.push(coll('asks', 'asks', orderBy('createdAt', 'desc'), limit(12)));
 }
 
 export const myName = () => state.user?.displayName?.split(' ')[0] || state.user?.email || 'Someone';
