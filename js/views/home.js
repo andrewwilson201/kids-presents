@@ -1,20 +1,20 @@
 // Parties: what's coming up, what still needs a present, and the ways to add one.
-import { icon } from '../ui.js?v=1';
-import { st, esc, head, section, empty, plural, routes } from '../core.js?v=1';
-import { eventRow, upcoming, past, undated, needing, children } from '../events.js?v=1';
-import { pickButton } from './scan.js?v=1';
+import { icon } from '../ui.js?v=2';
+import { st, esc, head, section, empty, plural, routes } from '../core.js?v=2';
+import { eventRow, upcoming, past, undated, needing, children, rows } from '../events.js?v=2';
+import { pickButton } from './scan.js?v=2';
 
 routes.home = () => {
   const reading = st.scans.filter(s => s.state === 'requested');
   const failed = st.scans.filter(s => s.state === 'failed' && !s.dismissed);
-  const check = st.events.filter(e => e.needsCheck);
+  const check = rows(st.events.filter(e => e.needsCheck));
   const need = needing();
-  const soon = upcoming();
-  const later = past();
-  const rest = soon.filter(e => !e.needsCheck);
-  const noDate = undated();
+  const soon = rows(upcoming());
+  const later = rows(past());
+  const rest = soon.filter(e => !check.includes(e));
+  const noDate = rows(undated());
   const sub = !soon.length ? 'No parties coming up.' : need.length
-    ? `${plural(need.length, 'party', 'parties')} still ${need.length === 1 ? 'needs' : 'need'} a present.`
+    ? `${plural(need.length, 'present')} still to sort.`
     : 'Every party coming up has a present sorted.';
   return `${head('Parties', { eyebrow: esc(children().map(c => c.name).join(' & ')), sub })}
     <div class="row add-row">${pickButton('From invite')}<a class="btn tonal" href="#/edit">${icon('plus')} Add a party</a></div>

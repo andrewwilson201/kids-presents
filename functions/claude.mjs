@@ -26,11 +26,16 @@ const S = (description) => ({ type: 'string', description });
 export const INVITE_SCHEMA = {
   type: 'object',
   additionalProperties: false,
-  required: ['is_invite', 'birthday_child', 'turning_age', 'birthday_child_gender', 'invited_child', 'date', 'start_time', 'end_time', 'venue', 'address', 'rsvp_by', 'rsvp_contact', 'theme', 'other_details', 'problem'],
+  required: ['is_invite', 'birthday_child', 'other_birthday_children', 'turning_age', 'birthday_child_gender', 'invited_child', 'date', 'start_time', 'end_time', 'venue', 'address', 'rsvp_by', 'rsvp_contact', 'theme', 'other_details', 'problem'],
   properties: {
     is_invite: { type: 'boolean', description: 'true if the picture is an invitation to a party or event' },
     birthday_child: S('First name (and surname if shown) of the child whose party it is, or ""'),
     turning_age: { type: 'integer', description: 'The age they are turning, or 0 if not stated' },
+    other_birthday_children: {
+      type: 'array',
+      description: 'For a joint party (twins, friends sharing a party): every birthday child after the first. Empty for an ordinary party.',
+      items: { type: 'object', additionalProperties: false, required: ['name', 'turning_age', 'gender'], properties: { name: S('Their name'), turning_age: { type: 'integer', description: 'The age they are turning, or 0 if not stated' }, gender: { type: 'string', enum: ['boy', 'girl', ''] } } },
+    },
     birthday_child_gender: { type: 'string', enum: ['boy', 'girl', ''], description: 'Only if clear from the invite (pronouns, "his", a name that is clearly one or the other); otherwise ""' },
     invited_child: S('The name written on the invite as the guest (e.g. "Dear Charlie"), or ""'),
     date: S('YYYY-MM-DD, or "" if no date'),
@@ -47,10 +52,11 @@ export const INVITE_SCHEMA = {
 };
 const INVITE_SYSTEM = `You read children's birthday party invitations for a UK family and return the details as JSON.
 Read every part of the picture, including handwriting. Dates are UK style (day before month). If the invite gives a day and month without a year, use the next time that date comes after today's date. Times like "2-4pm" mean start 14:00, end 16:00.
+Some parties are joint, for two or more birthday children ("Olivia and Max are turning 7"): put the first in birthday_child and each of the others in other_birthday_children, with their own age if the invite gives one. The guest the invite is addressed to is never a birthday child.
 Don't guess: leave a field empty when the invite doesn't say. Don't include anything that isn't on the invite.`;
 
 export async function readInvite(dataUrl, { today, children = [] }) {
-  if (fake()) return { is_invite: true, birthday_child: 'Olivia', turning_age: 7, birthday_child_gender: 'girl', invited_child: children[0]?.name || '', date: addDaysIso(today, 12), start_time: '14:00', end_time: '16:00', venue: 'Jump Zone', address: 'Mill Lane, AB1 2CD', rsvp_by: addDaysIso(today, 5), rsvp_contact: 'Sarah 07700 900123', theme: 'Unicorns', other_details: 'Socks needed for the trampolines.', problem: '' };
+  if (fake()) return { is_invite: true, birthday_child: 'Olivia', other_birthday_children: [], turning_age: 7, birthday_child_gender: 'girl', invited_child: children[0]?.name || '', date: addDaysIso(today, 12), start_time: '14:00', end_time: '16:00', venue: 'Jump Zone', address: 'Mill Lane, AB1 2CD', rsvp_by: addDaysIso(today, 5), rsvp_contact: 'Sarah 07700 900123', theme: 'Unicorns', other_details: 'Socks needed for the trampolines.', problem: '' };
   const m = /^data:(image\/[a-z+]+);base64,(.+)$/.exec(dataUrl || '');
   if (!m) throw new Error('The picture didn\'t arrive properly. Try again.');
   return ask({

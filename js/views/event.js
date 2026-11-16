@@ -1,11 +1,11 @@
 // One party: the details, whether you're going, and the present: ideas, who's
 // getting it, bought, wrapped. Claiming a present is a transaction (store.js
 // claimPresent), so you can't both end up buying one.
-import * as S from '../store.js?v=1';
-import { matchIdeas, pastPresents, ageOn, childrenFor, fmt12, shopLinks, needsPresent, daysBetween, isDay } from '../gifts.js?v=1';
-import { icon, childBadge } from '../ui.js?v=1';
-import { st, esc, head, section, run, toast, money, fmtLong, today, routes, actions, arg, render } from '../core.js?v=1';
-import { children, eventTitle, whenWords, presentChip, budgetOf, firstName, priceText } from '../events.js?v=1';
+import * as S from '../store.js?v=2';
+import { matchIdeas, pastPresents, ageOn, childrenFor, fmt12, shopLinks, needsPresent, presentSorted, daysBetween, isDay } from '../gifts.js?v=2';
+import { icon, childBadge } from '../ui.js?v=2';
+import { st, esc, head, section, run, toast, money, fmtLong, today, routes, actions, arg, render } from '../core.js?v=2';
+import { children, eventTitle, partyTitle, sibs, whenWords, presentChip, budgetOf, firstName, priceText } from '../events.js?v=2';
 
 const ev = () => st.events.find(x => x.id === arg);
 
@@ -25,12 +25,15 @@ routes.event = () => {
   const time = e.start ? `${fmt12(e.start)}${e.end ? ` to ${fmt12(e.end)}` : ''}` : '';
   const map = e.address || e.venue ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([e.venue, e.address].filter(Boolean).join(', '))}` : '';
   const before = pastPresents(st.events, e.friend, e.id, e.date);
-  return `${head(esc(eventTitle(e)), { eyebrow: childBadge(children(), e.child), sub: isDay(e.date) ? `${fmtLong(e.date)}${time ? `, ${time}` : ''} · ${whenWords(e.date)}` : 'No date yet' })}
+  const joint = sibs(e);
+  return `${head(esc(partyTitle(e)), { eyebrow: childBadge(children(), e.child), sub: isDay(e.date) ? `${fmtLong(e.date)}${time ? `, ${time}` : ''} · ${whenWords(e.date)}` : 'No date yet' })}
     ${e.needsCheck ? `<div class="notice warn">${icon('info')}<span class="grow"><b>Read from an invite picture</b><br>Check the details are right${e.child ? '' : ', and say who\'s invited'}.</span></div>
       <div class="row" style="margin:-4px 0 16px">${e.child ? `<button class="btn primary small" data-act="looksRight">${icon('check')} Looks right</button>` : ''}<a class="btn tonal small" href="#/edit/${esc(e.id)}">${icon('edit')} Change details</a></div>` : ''}
     ${!e.child ? `<div class="card"><b>Who's invited?</b><div class="row" style="margin-top:10px">${children().map(c => `<button class="btn tonal" data-act="setChild" data-id="${esc(c.id)}">${esc(c.name)}</button>`).join('')}${children().length > 1 ? '<button class="btn tonal" data-act="setChild" data-id="both">Both</button>' : ''}</div></div>` : ''}
 
-    ${presentCard(e, days)}
+    ${joint.length > 1 ? `<p class="small muted" style="margin:18px 4px 6px">A joint party: each birthday child has their own present.</p>
+      <div class="seg joint">${joint.map(x => `<a class="${x.id === e.id ? 'on' : ''}" href="#/event/${esc(x.id)}">${esc(firstName(x.friend) || '?')}${presentSorted(x) ? ` ${icon('check')}` : ''}</a>`).join('')}</div>` : ''}
+    ${presentCard(e, days, joint.length > 1 ? `${esc(firstName(e.friend))}'s present` : 'The present')}
 
     ${section('Details', { right: `<a class="btn small ghost" href="#/edit/${esc(e.id)}">${icon('edit')} Change</a>` })}
     <ul class="list card facts">
@@ -53,21 +56,21 @@ routes.event = () => {
       <span class="spacer"></span><button class="btn ghost small danger" data-act="deleteEvent">${icon('trash')} Delete</button></div>`;
 };
 
-function presentCard(e, days) {
+function presentCard(e, days, title) {
   const p = e.present || {};
   const mine = p.by?.uid === st.user.uid;
   const by = p.by?.name ? firstName(p.by.name) : 'Someone';
   const links = name => `<details class="mini shops"><summary>Find it in a shop</summary><div class="row">${shopLinks(name).map(l => `<a class="chip link" href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.name)} ${icon('external')}</a>`).join('')}</div></details>`;
   if (!needsPresent(e)) return `<div class="card soft">${presentChip(e)}</div>`;
   if (p.state === 'bought' || p.state === 'wrapped') {
-    return `${section('The present')}<div class="card present done"><div class="row nowrap" style="gap:12px"><span class="tile veg">${icon('gift')}</span>
+    return `${section(title)}<div class="card present done"><div class="row nowrap" style="gap:12px"><span class="tile veg">${icon('gift')}</span>
       <span class="grow"><b>${esc(p.name || 'A present')}</b><br><span class="small muted">Bought by ${mine ? 'you' : esc(by)}${p.price ? `, ${money(p.price)}` : ''}${p.where ? ` from ${esc(p.where)}` : ''}${p.cupboardId ? ' (from the cupboard)' : ''}</span></span></div>
       <div class="checks"><label class="row nowrap"><input type="checkbox" class="check" data-change="wrapped" ${p.state === 'wrapped' ? 'checked' : ''}> Wrapped</label>
       <label class="row nowrap"><input type="checkbox" class="check" data-change="card" ${e.card ? 'checked' : ''}> Card written</label></div>
       <button class="btn ghost small" data-act="undoPresent">Undo</button></div>`;
   }
   if (p.state === 'chosen') {
-    return `${section('The present')}<div class="card present chosen"><div class="row nowrap" style="gap:12px"><span class="tile other">${icon('bag')}</span>
+    return `${section(title)}<div class="card present chosen"><div class="row nowrap" style="gap:12px"><span class="tile other">${icon('bag')}</span>
       <span class="grow"><b>${esc(p.name || 'A present')}</b><br><span class="small muted">${mine ? 'You said you\'d get this' : `${esc(by)} is getting this`}${p.price ? `, about ${money(p.price)}` : ''}</span></span></div>
       ${mine ? `<form data-form="bought" class="row bought-form"><input type="text" name="where" placeholder="Where from (optional)" aria-label="Where from" data-keep="where"><input type="number" name="price" placeholder="£" aria-label="Price" inputmode="decimal" style="max-width:90px" value="${esc(p.price || '')}"><button class="btn primary">${icon('check')} Bought it</button></form>
         ${links(p.name || '')}<button class="btn ghost small" data-act="undoPresent">Change my mind</button>`
@@ -79,7 +82,7 @@ function presentCard(e, days) {
   const inCupboard = st.cupboard.filter(c => !c.usedFor && (!c.for || c.for === 'any' || !q.gender || c.for === q.gender) && (q.age == null || ((c.ageMin ?? 0) <= q.age && (c.ageMax ?? 99) >= q.age)));
   const ask = st.asks.find(a => a.eventId === e.id);
   const urgent = days != null && days <= (st.household?.reminders?.second ?? 3);
-  return `${section('The present')}<div class="card present">
+  return `${section(title)}<div class="card present">
     <p class="small ${urgent ? 'danger-text' : 'muted'}" style="margin:0 0 12px">${urgent ? `${icon('alert')} ` : ''}Nobody's getting one yet. ${q.age ? `Ideas for a ${q.age}-year-old${q.gender ? ` ${q.gender}` : ''}` : 'Ideas'} up to ${money(q.budget)}${q.interests ? `, into ${esc(q.interests)}` : ''}:</p>
     ${inCupboard.length ? `<p class="small" style="margin:0 0 6px"><b>In the cupboard</b></p><ul class="list compact ideas">${inCupboard.map(c => `<li><span class="grow"><span class="name">${esc(c.name)}</span><span class="meta">${esc(priceText(c))}</span></span><button class="btn small primary" data-act="useCupboard" data-id="${esc(c.id)}">Use this</button></li>`).join('')}</ul>` : ''}
     <ul class="list compact ideas">${ideas.map(i => `<li><span class="grow"><span class="name">${esc(i.name)}</span><span class="meta">${esc([priceText(i), i.description].filter(Boolean).join(' · '))}</span></span><button class="btn small tonal" data-act="chooseIdea" data-id="${esc(i.id)}">I'll get this</button></li>`).join('') || '<li class="muted small">No saved ideas fit. Try Claude, or widen the budget.</li>'}</ul>
@@ -141,18 +144,21 @@ actions.askClaude = () => {
     location.hash = `#/ideas/${e.id}`;
   });
 };
-actions.looksRight = () => run(() => S.updateH(['events', arg], { needsCheck: false }), 'Thanks');
-actions.setChild = el => run(() => S.updateH(['events', arg], { child: el.dataset.id }));
-actions.rsvp = el => { const e = ev(); run(() => S.updateH(['events', arg], { rsvp: e.rsvp === el.dataset.id ? '' : el.dataset.id })); };
-actions.cancelEvent = () => run(() => S.updateH(['events', arg], { cancelled: true }), 'Marked as cancelled');
-actions.uncancel = () => run(() => S.updateH(['events', arg], { cancelled: false }));
+// The party's own details are the same for every birthday child of a joint party.
+const updateParty = data => S.batchH(sibs(ev()).map(x => ['update', ['events', x.id], data]));
+actions.looksRight = () => run(() => updateParty({ needsCheck: false }), 'Thanks');
+actions.setChild = el => run(() => updateParty({ child: el.dataset.id }));
+actions.rsvp = el => { const e = ev(); run(() => updateParty({ rsvp: e.rsvp === el.dataset.id ? '' : el.dataset.id })); };
+actions.cancelEvent = () => run(() => updateParty({ cancelled: true }), 'Marked as cancelled');
+actions.uncancel = () => run(() => updateParty({ cancelled: false }));
 actions.noPresent = () => { const e = ev(); run(() => S.updateH(['events', arg], { noPresent: !e.noPresent })); };
 actions.deleteEvent = () => {
   const e = ev();
-  if (!confirm(`Delete ${eventTitle(e)}? This can't be undone.`)) return;
+  const all = sibs(e);
+  if (!confirm(`Delete ${partyTitle(e)}?${all.length > 1 ? ' That\'s the whole party. To take one child off it, use Change instead.' : ''} This can't be undone.`)) return;
   run(async () => {
-    if (e.present?.cupboardId) await S.updateH(['cupboard', e.present.cupboardId], { usedFor: null }).catch(() => {});
-    await S.deleteH(['events', e.id]);
+    for (const x of all) if (x.present?.cupboardId) await S.updateH(['cupboard', x.present.cupboardId], { usedFor: null }).catch(() => {});
+    await S.batchH(all.map(x => ['delete', ['events', x.id]]));
     location.hash = '#/home';
   }, 'Deleted');
 };

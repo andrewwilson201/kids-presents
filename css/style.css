@@ -446,3 +446,10 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 14px 0; }
 .legend span { display: inline-flex; gap: 6px; align-items: center; }
 .child-form .row { gap: 10px; margin-bottom: 8px; }
 .cupboard-use, .field.use { margin: 8px 0 0; }
+
+/* Joint parties: one present per birthday child */
+.per-child { display: inline-flex; align-items: center; gap: 5px; font-weight: 600; color: var(--text); }
+.event-row .meta:has(.per-child) { flex-direction: column; align-items: flex-start; }
+.seg.joint { margin: 0 0 4px; }
+.seg.joint a svg { width: 14px; height: 14px; vertical-align: -2px; color: var(--ok-text); }
+.joint-child { border-top: 1px dashed var(--line-strong); padding-top: 14px; }

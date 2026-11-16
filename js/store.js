@@ -9,6 +9,7 @@
 //   households/{hid}/events/{id}       a party or a birthday: { kind, child, friend, friendAge, friendGender, interests, date, start, end,
 //                                        venue, address, rsvpBy, rsvp, contact, theme, notes, budget, card, cancelled, needsCheck, scanId,
 //                                        present{state: chosen|bought|wrapped, name, ideaId, price, where, cupboardId, by{uid,name}, at}, reminded{} }
+//                                      a joint party is one event per birthday child, sharing groupId (+ groupOrder): js/gifts.js
 //   households/{hid}/ideas/{id}        present ideas: { name, description, price, ageMin, ageMax, for, interests[], category, search, source, given, liked, hidden }
 //   households/{hid}/cupboard/{id}     presents bought ahead: { name, price, ageMin, ageMax, for, notes, by, usedFor, createdAt }
 //   households/{hid}/scans/{id}        an invite picture for Claude to read: { image (data URL), state: requested|done|failed, by, eventId, message }
@@ -146,7 +147,7 @@ async function batchAt(hid, ops) {
     const b = writeBatch(db);
     for (const [kind, path, data] of ops.slice(i, i + 400)) {
       const ref = kind === 'add' ? doc(collection(db, ['households', hid, ...path.slice(0, 1)].join('/'))) : doc(db, ['households', hid, ...path].join('/'));
-      if (kind === 'delete') b.delete(ref); else b.set(ref, data, { merge: true });
+      if (kind === 'delete') b.delete(ref); else if (kind === 'update') b.update(ref, data); else b.set(ref, data, { merge: true });
     }
     await b.commit();
   }

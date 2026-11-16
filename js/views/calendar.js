@@ -1,9 +1,9 @@
 // Calendar: a month at a time, each party a dot in its child's colour. Tap a
 // day to see what's on. The phone calendar feed (Settings) is the other way to see it.
-import { addDays, isDay } from '../gifts.js?v=1';
-import { icon, childColour } from '../ui.js?v=1';
-import { st, esc, head, today, fmtDay, fmtLong, empty, routes, actions, render, arg } from '../core.js?v=1';
-import { eventRow, children } from '../events.js?v=1';
+import { addDays, isDay } from '../gifts.js?v=2';
+import { icon, childColour } from '../ui.js?v=2';
+import { st, esc, head, today, fmtDay, fmtLong, empty, routes, actions, render, arg } from '../core.js?v=2';
+import { eventRow, children, rows } from '../events.js?v=2';
 
 let picked = null;
 const monthOf = () => (/^\d{4}-\d{2}$/.test(arg || '') ? arg : today().slice(0, 7));
@@ -14,7 +14,7 @@ routes.calendar = () => {
   const startDow = (new Date(`${first}T12:00:00Z`).getUTCDay() + 6) % 7; // Monday first
   const next = addDays(first, 32).slice(0, 7), prev = addDays(first, -1).slice(0, 7);
   const byDay = {};
-  for (const e of st.events) if (isDay(e.date) && e.date.startsWith(month)) (byDay[e.date] ||= []).push(e);
+  for (const e of rows(st.events)) if (isDay(e.date) && e.date.startsWith(month)) (byDay[e.date] ||= []).push(e);
   const cells = [];
   for (let i = 0; i < startDow; i++) cells.push('<span class="cal-cell blank"></span>');
   for (let day = first; day.startsWith(month); day = addDays(day, 1)) {

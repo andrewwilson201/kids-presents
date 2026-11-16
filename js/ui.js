@@ -65,5 +65,5 @@ export const childColour = (children, id) => (id === 'both' ? 'both' : `k${Math.
 export const childBadge = (children, id) => {
   if (!id) return '<span class="kid none">Who?</span>';
   const name = id === 'both' ? (children || []).map(c => c.name).join(' & ') : (children || []).find(c => c.id === id)?.name || id;
-  return `<span class="kid ${childColour(children, id)}">${String(name).replace(/[&<>"]/g, '')}</span>`;
+  return `<span class="kid ${childColour(children, id)}">${String(name).replace(/[<>"]/g, '').replace(/&/g, '&amp;')}</span>`;
 };

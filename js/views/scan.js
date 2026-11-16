@@ -3,9 +3,9 @@
 // phone's photos, or by pasting it. It's made smaller, saved as a scan, and the
 // readInvite function has Claude read it and add the party (needsCheck, so
 // you look it over). This screen shows the progress and opens the party.
-import * as S from '../store.js?v=1';
-import { icon } from '../ui.js?v=1';
-import { st, esc, head, run, toast, render, routes, actions, hooks, route } from '../core.js?v=1';
+import * as S from '../store.js?v=2';
+import { icon } from '../ui.js?v=2';
+import { st, esc, head, run, toast, render, routes, actions, hooks, route } from '../core.js?v=2';
 
 // Make the picture small enough for the database (a document holds up to 1 MB).
 export async function compress(file, maxSide = 1600) {

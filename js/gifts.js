@@ -155,3 +155,41 @@ export function eventFromInvite(r, children = [], today = '') {
     child: matches.length === 1 ? matches[0].id : matches.length > 1 ? 'both' : '',
   };
 }
+
+// ---------- joint parties ----------
+// A party for more than one birthday child (twins, friends sharing a party) is
+// one event per birthday child, each with its own present, ideas and bought
+// state, tied together by the same groupId. The party's own details (date,
+// place, reply, who's invited) are kept the same on each of them.
+export function siblingsOf(e, events) {
+  if (!e) return [];
+  if (!e.groupId) return [e];
+  return events.filter(x => x.groupId === e.groupId).sort((a, b) => (a.groupOrder ?? 0) - (b.groupOrder ?? 0) || String(a.id).localeCompare(String(b.id)));
+}
+// The events as parties: [[event], [event, event], ...], in the order given.
+export function groupEvents(events) {
+  const seen = new Set(); const out = [];
+  for (const e of events) {
+    const k = e.groupId || e.id;
+    if (seen.has(k)) continue;
+    seen.add(k); out.push(siblingsOf(e, events));
+  }
+  return out;
+}
+export const joinNames = names => (names.length <= 1 ? (names[0] || '') : `${names.slice(0, -1).join(', ')} & ${names[names.length - 1]}`);
+
+// The morning-of reminder for a joint party: one message, every present.
+export function jointDayOf(sibs) {
+  const e = sibs[0];
+  const parts = sibs.map(s => `${s.friend || 'a friend'}: ${s.present?.name && presentSorted(s) ? s.present.name : needsPresent(s) ? 'nothing bought yet' : 'no present needed'}`);
+  return { kind: 'dayOf', title: `${joinNames(sibs.map(s => s.friend || 'a friend'))}'s party is today${e.start ? ` at ${fmt12(e.start)}` : ''}`, body: `Presents to take. ${parts.join('; ')}. Don't forget the cards.${e.venue ? ` ${e.venue}.` : ''}` };
+}
+
+// An invite for a joint party: one event per birthday child on it.
+export function eventsFromInvite(r, children = [], today = '') {
+  const first = eventFromInvite(r, children, today);
+  const others = (Array.isArray(r.other_birthday_children) ? r.other_birthday_children : [])
+    .map(o => ({ name: typeof o?.name === 'string' ? o.name.trim().slice(0, 80) : '', age: Number(o?.turning_age) > 0 ? Number(o.turning_age) : null, gender: ['boy', 'girl'].includes(o?.gender) ? o.gender : '' }))
+    .filter((o, i, all) => o.name && !sameFriend(o.name, first.friend) && all.findIndex(x => sameFriend(x.name, o.name)) === i).slice(0, 5);
+  return [first, ...others.map(o => ({ ...first, friend: o.name, friendAge: o.age, friendGender: o.gender }))];
+}

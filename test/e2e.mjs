@@ -101,7 +101,7 @@ await a.waitForSelector('text=Sarah is getting this');
 await shot(a, '06-andrew-sees-sarah');
 const ev = (await H.collection('events').get()).docs[0];
 const clash = await a.evaluate(async id => {
-  const S = await import('/js/store.js?v=1');
+  const S = await import('/js/store.js?v=2');
   try { await S.claimPresent(id, { state: 'chosen', name: 'Something else' }); return 'claimed'; } catch (e) { return e.code; }
 }, ev.id);
 assert.equal(clash, 'claimed', 'a second claim is refused');
@@ -152,6 +152,50 @@ await b.selectOption('select[data-change=useFor]', newId);
 await b.waitForSelector('text=Given already');
 await shot(b, '11-cupboard');
 assert.equal((await H.collection('events').doc(newId).get()).data().present.cupboardId != null, true);
+
+// 9b. A joint party: two birthday children, a present each.
+step('Joint party for two birthday children');
+await a.goto(`${SITE}?emulator#/edit`);
+await a.selectOption('select[name=child]', 'both');
+await a.fill('input[name=friend]', 'Mia');
+await a.fill('input[name=friendAge]', '6');
+await a.click('button:has-text("Add another birthday child")');
+await a.fill('input[name="x0.friend"]', 'Zac');
+await a.fill('input[name="x0.friendAge"]', '6');
+await a.selectOption('select[name="x0.friendGender"]', 'boy');
+await a.fill('input[name=date]', addDays(today, 20));
+await a.fill('input[name=venue]', 'Village hall');
+await shot(a, '11b-joint-form');
+await a.click('button:has-text("Add party")');
+await a.waitForSelector('h1:has-text("Mia & Zac\'s birthday party")');
+await a.waitForSelector('text=Mia\'s present');
+await a.click('.ideas button:has-text("I\'ll get this") >> nth=0');
+await a.waitForSelector('text=You said you\'d get this');
+await a.click('.seg.joint a:has-text("Zac")');
+await a.waitForSelector('text=Zac\'s present');
+await a.waitForSelector('text=Nobody\'s getting one yet');
+await shot(a, '11c-joint-party');
+await a.click('button:has-text("Going")');
+await a.waitForTimeout(400);
+const joint = (await H.collection('events').where('venue', '==', 'Village hall').get()).docs.map(d => d.data());
+assert.equal(joint.length, 2);
+assert.equal(new Set(joint.map(e => e.groupId)).size, 1);
+assert.deepEqual(joint.map(e => e.rsvp), ['yes', 'yes'], 'the reply is for the whole party');
+assert.deepEqual(joint.map(e => e.present?.state || '').sort(), ['', 'chosen'], 'each child has their own present');
+await b.goto(`${SITE}?emulator#/home`);
+await b.waitForSelector('text=Mia & Zac\'s birthday party');
+assert.equal(await b.locator('.event-row:has-text("Mia & Zac")').count(), 1, 'one row for the joint party');
+await shot(b, '11d-joint-home');
+// Take Zac off: it becomes an ordinary party again.
+await a.click('.seg.joint a:has-text("Mia")');
+await a.waitForSelector('text=Mia\'s present');
+await a.click('a:has-text("Change")');
+await a.waitForSelector('input[name="x0.friend"]');
+assert.equal(await a.inputValue('input[name="x0.friend"]'), 'Zac');
+await a.fill('input[name="x0.friend"]', '');
+await a.click('button:has-text("Save")');
+await a.waitForSelector('h1:has-text("Mia\'s 6th birthday party")');
+assert.equal((await H.collection('events').where('venue', '==', 'Village hall').get()).size, 1);
 
 // 10. Calendar and home.
 step('Calendar, home, settings');

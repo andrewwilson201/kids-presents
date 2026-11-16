@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { ageOn, dueReminders, matchIdeas, scoreIdea, eventFromInvite, pastPresents, daysBetween, addDays, shopLinks, fmt12 } from '../js/gifts.js';
+import { siblingsOf, groupEvents, joinNames, jointDayOf, eventsFromInvite, ageOn, dueReminders, matchIdeas, scoreIdea, eventFromInvite, pastPresents, daysBetween, addDays, shopLinks, fmt12 } from '../js/gifts.js';
 
 const kids = [{ id: 'charlie', name: 'Charlie', gender: 'boy', age: 7, ageOn: '2026-11-16' }, { id: 'sophie', name: 'Sophie', gender: 'girl', birthday: '2021-03-04' }];
 const party = (over = {}) => ({ id: 'e1', kind: 'party', child: 'sophie', friend: 'Olivia', date: '2026-11-28', start: '14:00', ...over });
@@ -77,6 +77,25 @@ test('what we gave a friend before', () => {
   assert.deepEqual(pastPresents(events, 'Olivia', 'c').map(p => p.name), ['Slime kit', 'Book']);
 });
 
+test('joint parties: one event per birthday child, shown as one party', () => {
+  const a = party({ id: 'a', friend: 'Olivia', groupId: 'g', groupOrder: 0, present: { state: 'bought', name: 'Lego' } });
+  const b = party({ id: 'b', friend: 'Max', groupId: 'g', groupOrder: 1 });
+  const c = party({ id: 'c', friend: 'Isla' });
+  assert.deepEqual(siblingsOf(b, [b, c, a]).map(e => e.id), ['a', 'b']);
+  assert.deepEqual(groupEvents([b, c, a]).map(g => g.map(e => e.id)), [['a', 'b'], ['c']]);
+  assert.equal(joinNames(['Olivia', 'Max', 'Isla']), 'Olivia, Max & Isla');
+  const d = jointDayOf([a, b]);
+  assert.match(d.title, /Olivia & Max's party is today at 2pm/);
+  assert.match(d.body, /Olivia: Lego; Max: nothing bought yet/);
+  // Each child's present has its own reminder.
+  assert.deepEqual(dueReminders(a, '2026-11-25', {}, kids), []);
+  assert.equal(dueReminders(b, '2026-11-25', {}, kids)[0].kind, 'second');
+  // An invite naming two birthday children.
+  const evs = eventsFromInvite({ birthday_child: 'Olivia', turning_age: 7, birthday_child_gender: 'girl', other_birthday_children: [{ name: 'Max', turning_age: 6, gender: 'boy' }, { name: 'olivia', turning_age: 7, gender: '' }, { name: '', turning_age: 0, gender: '' }], invited_child: 'Charlie', date: '2026-11-28', venue: 'Jump Zone' }, kids, '2026-11-16');
+  assert.deepEqual(evs.map(e => [e.friend, e.friendAge, e.friendGender, e.child, e.venue]), [['Olivia', 7, 'girl', 'charlie', 'Jump Zone'], ['Max', 6, 'boy', 'charlie', 'Jump Zone']]);
+  assert.equal(eventsFromInvite({ birthday_child: 'Olivia' }, kids).length, 1);
+});
+
 test('shop links', () => {
   const l = shopLinks('LEGO City small set');
   assert.equal(l.length, 4);
@@ -88,7 +107,7 @@ test('calendar feed', async () => {
   const { execSync } = await import('node:child_process');
   execSync('node tools/copy-shared.mjs', { cwd: new URL('..', import.meta.url) });
   const { buildCalendar } = await import('../functions/tasks.mjs');
-  const ics = buildCalendar({ name: 'The Wilsons', children: kids }, [party({ venue: 'Jump Zone; Mill Lane', present: { state: 'chosen', name: 'Lego', by: { name: 'Andrew' } } }), party({ id: 'e2', kind: 'birthday', start: '', date: '2026-12-01' })], new Date('2026-11-16T10:00:00Z'));
+  const ics = buildCalendar({ name: 'The Wilsons', children: kids }, [party({ venue: 'Jump Zone; Mill Lane', present: { state: 'chosen', name: 'Lego', by: { name: 'Andrew' } } }), party({ id: 'e2', kind: 'birthday', start: '', date: '2026-12-01' }), party({ id: 'j1', friend: 'Mia', date: '2026-12-05', groupId: 'j', groupOrder: 0, present: { state: 'bought', name: 'Slime' } }), party({ id: 'j2', friend: 'Zac', date: '2026-12-05', groupId: 'j', groupOrder: 1 })], new Date('2026-11-16T10:00:00Z'));
   assert.match(ics, /BEGIN:VCALENDAR/);
   assert.match(ics, /SUMMARY:Sophie: Olivia's party/);
   assert.match(ics, /DTSTART;TZID=Europe\/London:20261128T140000/);
@@ -96,5 +115,8 @@ test('calendar feed', async () => {
   assert.ok(ics.includes('LOCATION:Jump Zone\\; Mill Lane'));
   assert.match(ics, /DTSTART;VALUE=DATE:20261201/);
   assert.match(ics, /Andrew is getting it/);
+  assert.match(ics, /SUMMARY:Sophie: Mia & Zac's party/);
+  assert.ok(ics.replace(/\r\n /g, '').includes('Present for Mia: Slime (bought)\\nPresent for Zac: not sorted yet'));
+  assert.equal(ics.match(/BEGIN:VEVENT/g).length, 3);
   assert.ok(ics.split('\r\n').every(l => l.length <= 75));
 });

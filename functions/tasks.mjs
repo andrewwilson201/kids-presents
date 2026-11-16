@@ -3,7 +3,7 @@
 import { readInvite, suggestIdeas } from './claude.mjs';
 import { notify } from './notify.mjs';
 import { households } from './access.mjs';
-import { iso, addDays, eventFromInvite, dueReminders, pastPresents, DEFAULT_REMINDERS, isDay, daysBetween } from './shared/gifts.js';
+import { iso, addDays, eventsFromInvite, dueReminders, pastPresents, DEFAULT_REMINDERS, isDay, daysBetween, groupEvents, jointDayOf, joinNames } from './shared/gifts.js';
 
 // Only one run works on a request: 'requested' -> 'working'.
 async function claim(ref) {
@@ -28,14 +28,19 @@ export async function processScan(h, ref, now = new Date()) {
       await ref.update({ state: 'failed', message: 'That doesn\'t look like a party invite.' });
       return null;
     }
-    const ev = eventFromInvite(r, children, today);
+    // A joint party comes back as one event per birthday child.
+    const evs = eventsFromInvite(r, children, today);
+    const ev = evs[0];
     if (!ev.friend && !ev.date) {
       await ref.update({ state: 'failed', message: r.problem || 'Claude couldn\'t make out the details. Try a clearer picture, or type it in.' });
       return null;
     }
-    const evRef = h.ref.collection('events').doc();
-    await evRef.set({ ...ev, needsCheck: true, scanId: ref.id, readProblem: r.problem || '', createdBy: scan.by || null, createdAt: now });
-    await ref.update({ state: 'done', eventId: evRef.id, doneAt: now });
+    const refs = evs.map(() => h.ref.collection('events').doc());
+    const evRef = refs[0];
+    const batch = h.ref.firestore.batch();
+    refs.forEach((rf, i) => batch.set(rf, { ...evs[i], needsCheck: true, scanId: ref.id, readProblem: r.problem || '', createdBy: scan.by || null, createdAt: now, ...(evs.length > 1 ? { groupId: evRef.id, groupOrder: i } : {}) }));
+    batch.update(ref, { state: 'done', eventId: evRef.id, doneAt: now });
+    await batch.commit();
     return evRef.id;
   } catch (e) {
     console.error('Reading an invite failed', e);
@@ -93,18 +98,27 @@ export async function sendReminders(db, now = new Date()) {
     const settings = { ...DEFAULT_REMINDERS, ...(hd.reminders || {}) };
     const until = addDays(today, Math.max(settings.first || 0, settings.second || 0, 2) + 31);
     const snap = await h.ref.collection('events').where('date', '>=', today).where('date', '<=', until).get();
-    for (const d of snap.docs) {
-      const e = { id: d.id, ...d.data() };
-      // Reply-by dates can be weeks before the party, so they're checked on every upcoming event.
+    const all = snap.docs.map(d => ({ id: d.id, ref: d.ref, ...d.data() }));
+    // A joint party is one event per birthday child: each child's present gets
+    // its own reminders, but the reply and morning-of reminders are sent once.
+    const once = new Set();
+    for (const e of all) {
       const due = dueReminders(e, today, settings, hd.children || []);
       if (!due.length) continue;
       const update = {};
-      for (const r of due) {
-        await notify(h, { title: r.title, body: r.body, link: `#/event/${e.id}`, tag: `${e.id}-${r.kind}` });
+      for (let r of due) {
         update[`reminded.${r.kind}`] = now;
+        if (e.groupId && ['rsvp', 'dayOf'].includes(r.kind)) {
+          const key = `${e.groupId}-${r.kind}`;
+          if (once.has(key)) continue;
+          once.add(key);
+          const sibs = all.filter(x => x.groupId === e.groupId).sort((a, b) => (a.groupOrder ?? 0) - (b.groupOrder ?? 0));
+          if (r.kind === 'dayOf' && sibs.length > 1) r = jointDayOf(sibs);
+        }
+        await notify(h, { title: r.title, body: r.body, link: `#/event/${e.id}`, tag: `${e.id}-${r.kind}` });
         sent++;
       }
-      await d.ref.update(update);
+      await e.ref.update(update);
     }
   }
   return sent;
@@ -118,12 +132,17 @@ export function buildCalendar(hd, events, now = new Date()) {
   const kids = hd.children || [];
   const kidName = c => (c === 'both' ? kids.map(k => k.name).join(' & ') : kids.find(k => k.id === c)?.name || '');
   const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Party Presents//EN', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH', `X-WR-CALNAME:${icsText(`${hd.name || 'Family'} parties`)}`, 'X-WR-TIMEZONE:Europe/London', 'REFRESH-INTERVAL;VALUE=DURATION:PT6H'];
-  for (const e of events) {
+  // A joint party (one event per birthday child) is one calendar entry.
+  for (const group of groupEvents(events)) {
+    const e = group[0];
     if (!isDay(e.date) || daysBetween(e.date, iso(now)) > 400) continue;
     const who = kidName(e.child);
-    const title = `${who ? `${who}: ` : ''}${e.friend || 'Party'}'s ${e.kind === 'birthday' ? 'birthday' : 'party'}${e.cancelled ? ' (cancelled)' : e.rsvp === 'no' ? ' (not going)' : ''}`;
-    const p = e.present || {};
-    const present = p.name ? `Present: ${p.name} (${p.state === 'chosen' ? `${p.by?.name || 'someone'} is getting it` : p.state})` : 'Present: not sorted yet';
+    const title = `${who ? `${who}: ` : ''}${joinNames(group.map(x => x.friend || 'Party'))}'s ${e.kind === 'birthday' ? 'birthday' : 'party'}${e.cancelled ? ' (cancelled)' : e.rsvp === 'no' ? ' (not going)' : ''}`;
+    const present = group.map(x => {
+      const p = x.present || {};
+      const label = group.length > 1 ? `Present for ${x.friend}` : 'Present';
+      return p.name ? `${label}: ${p.name} (${p.state === 'chosen' ? `${p.by?.name || 'someone'} is getting it` : p.state})` : `${label}: not sorted yet`;
+    }).join('\n');
     const day = e.date.replace(/-/g, '');
     const timed = e.start && e.kind !== 'birthday';
     lines.push('BEGIN:VEVENT', `UID:${e.id}@party-presents`, `DTSTAMP:${stamp(now)}`);

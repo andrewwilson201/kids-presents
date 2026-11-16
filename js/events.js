@@ -1,8 +1,8 @@
 // How parties and birthdays look in lists: shared by the Parties, Calendar,
 // Ideas and Cupboard screens.
-import { daysBetween, fmt12, presentSorted, needsPresent, isDay } from './gifts.js?v=1';
-import { icon, childBadge } from './ui.js?v=1';
-import { st, esc, fmtDay, today, money } from './core.js?v=1';
+import { daysBetween, fmt12, presentSorted, needsPresent, isDay, siblingsOf, groupEvents, joinNames } from './gifts.js?v=2';
+import { icon, childBadge } from './ui.js?v=2';
+import { st, esc, fmtDay, today, money } from './core.js?v=2';
 
 export const children = () => st.household?.children || [];
 const ordinal = n => `${n}${(n % 100 >= 11 && n % 100 <= 13) ? 'th' : ({ 1: 'st', 2: 'nd', 3: 'rd' }[n % 10] || 'th')}`;
@@ -14,6 +14,16 @@ export function eventTitle(e) {
   if (e.kind === 'birthday') return `${who}${age} birthday`;
   return `${who}${age} birthday party`;
 }
+// A joint party's other birthday children (each is its own event): all of them, this one included.
+export const sibs = e => siblingsOf(e, st.events);
+// "Olivia & Max's birthday party" for a joint party.
+export function partyTitle(e) {
+  const s = sibs(e);
+  if (s.length < 2) return eventTitle(e);
+  return `${joinNames(s.map(x => x.friend || '?'))}'s ${e.kind === 'birthday' ? 'birthdays' : 'birthday party'}`;
+}
+// A list of events as one row per party.
+export const rows = list => groupEvents(list).map(g => g[0]);
 export const firstName = n => String(n || '').split(' ')[0];
 
 // When, in words: "in 3 days", "tomorrow", "today", "2 weeks ago".
@@ -45,14 +55,15 @@ export function presentChip(e) {
 // One party in a list.
 export function eventRow(e, { showChild = true } = {}) {
   const d = (e.date || '').split('-')[2];
+  const joint = sibs(e);
   const month = isDay(e.date) ? fmtDay(e.date, { month: 'short' }) : '';
   const time = e.start ? `${fmt12(e.start)}${e.end ? `–${fmt12(e.end)}` : ''}` : '';
   const where = e.venue || e.address || '';
   return `<li class="event-row${e.cancelled || e.rsvp === 'no' ? ' dim' : ''}"><a class="grow row nowrap" href="#/event/${esc(e.id)}" style="gap:14px">
     <span class="datebox">${isDay(e.date) ? `<small>${esc(fmtDay(e.date, { weekday: 'short' }))}</small><b>${Number(d)}</b><small>${esc(month)}</small>` : '<b>?</b>'}</span>
-    <span class="grow"><span class="name">${esc(eventTitle(e))}</span>
+    <span class="grow"><span class="name">${esc(partyTitle(e))}</span>
       <span class="meta">${showChild ? childBadge(children(), e.child) : ''} ${esc([time, where].filter(Boolean).join(' · '))}</span>
-      <span class="meta">${presentChip(e)}${e.needsCheck ? ` <span class="chip warn">${icon('info')} Check details</span>` : ''}</span></span>
+      <span class="meta">${joint.length > 1 ? joint.map(x => `<span class="per-child">${esc(firstName(x.friend))} ${presentChip(x)}</span>`).join('') : presentChip(e)}${joint.some(x => x.needsCheck) ? ` <span class="chip warn">${icon('info')} Check details</span>` : ''}</span></span>
     <span class="chev">${icon('chevron')}</span></a></li>`;
 }
 

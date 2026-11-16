@@ -1,10 +1,10 @@
 // The present cupboard: presents bought ahead (in a sale, a multi-buy) waiting
 // for a party. A party's page offers the ones that fit. Used ones are kept for
 // the record, folded away.
-import * as S from '../store.js?v=1';
-import { icon } from '../ui.js?v=1';
-import { st, esc, head, section, run, empty, money, keep, routes, actions } from '../core.js?v=1';
-import { eventTitle, firstName, needing } from '../events.js?v=1';
+import * as S from '../store.js?v=2';
+import { icon } from '../ui.js?v=2';
+import { st, esc, head, section, run, empty, money, keep, routes, actions } from '../core.js?v=2';
+import { eventTitle, firstName, needing } from '../events.js?v=2';
 
 const ages = c => (c.ageMin != null || c.ageMax != null ? `ages ${c.ageMin ?? '?'}–${c.ageMax ?? '?'}` : '');
 routes.cupboard = () => {
