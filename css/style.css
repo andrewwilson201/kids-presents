@@ -453,3 +453,19 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 14px 0; }
 .seg.joint { margin: 0 0 4px; }
 .seg.joint a svg { width: 14px; height: 14px; vertical-align: -2px; color: var(--ok-text); }
 .joint-child { border-top: 1px dashed var(--line-strong); padding-top: 14px; }
+
+/* Review round: friends, products, nudges, the message box */
+.nudges > li, .friends > li { align-items: flex-start; }
+.friend details { width: 100%; }
+.friend details > summary { display: flex; width: 100%; margin: 0; color: inherit; font-weight: inherit; font-size: inherit; }
+.friend details > summary::after { margin-left: 8px; color: var(--faint); font-size: 20px; }
+.friend .meta svg { width: 13px; height: 13px; vertical-align: -2px; }
+.friend .history { margin: 8px 0 10px; border-top: 1px solid var(--line); }
+.friend .history a { color: inherit; text-decoration: none; }
+.products a.name { color: var(--info); text-decoration: none; }
+.products a.name svg { width: 13px; height: 13px; vertical-align: -1px; }
+.present .shops { margin: 12px 0 4px; align-items: center; gap: 8px; }
+.more-details > summary { margin: 0; }
+.reading .quote { white-space: pre-wrap; margin: 0; }
+textarea { width: 100%; }
+details.more .btn.danger { color: var(--danger); }

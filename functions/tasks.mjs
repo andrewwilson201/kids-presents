@@ -1,9 +1,9 @@
 // The functions' work, kept apart from index.mjs (which only declares the
 // Firebase triggers) so the tests can call it directly against the emulator.
-import { readInvite, suggestIdeas } from './claude.mjs';
+import { readInvite, suggestIdeas, findProducts } from './claude.mjs';
 import { notify } from './notify.mjs';
 import { households } from './access.mjs';
-import { iso, addDays, eventsFromInvite, dueReminders, pastPresents, DEFAULT_REMINDERS, isDay, daysBetween, groupEvents, jointDayOf, joinNames } from './shared/gifts.js';
+import { iso, addDays, eventsFromInvite, dueReminders, pastPresents, DEFAULT_REMINDERS, isDay, daysBetween, groupEvents, jointDayOf, joinNames, findDuplicate, friendsFrom, samePerson, turningOn } from './shared/gifts.js';
 
 // Only one run works on a request: 'requested' -> 'working'.
 async function claim(ref) {
@@ -16,28 +16,66 @@ async function claim(ref) {
 }
 const plainError = e => (e?.status === 401 ? 'The Claude API key isn\'t working. Set it again (see the README).' : e?.status === 429 ? 'Claude is busy. Try again in a minute.' : String(e?.message || e).slice(0, 200));
 
-// An invite picture: Claude reads it, and the party is added for you to check.
+// An invite (a picture, or the words of a message): Claude reads it, and the
+// party is added for you to check. If the same birthday child's party is
+// already in the calendar for that day, nothing is added twice: the scan
+// points at the one that's there, and any gaps in it are filled in.
+const PARTY_FIELDS = ['start', 'end', 'venue', 'address', 'rsvpBy', 'contact', 'theme', 'notes'];
 export async function processScan(h, ref, now = new Date()) {
   if (!(await claim(ref))) return null;
   const scan = (await ref.get()).data();
   try {
     const children = h.data().children || [];
     const today = iso(now);
-    const r = await readInvite(scan.image, { today, children });
+    const image = scan.text ? '' : (await h.ref.collection('scanImages').doc(ref.id).get()).data()?.image || scan.image || '';
+    const r = await readInvite(scan.text ? { text: scan.text } : { image }, { today, children });
     if (!r.is_invite) {
       await ref.update({ state: 'failed', message: 'That doesn\'t look like a party invite.' });
       return null;
     }
     // A joint party comes back as one event per birthday child.
     const evs = eventsFromInvite(r, children, today);
-    const ev = evs[0];
-    if (!ev.friend && !ev.date) {
+    if (!evs[0].friend && !evs[0].date) {
       await ref.update({ state: 'failed', message: r.problem || 'Claude couldn\'t make out the details. Try a clearer picture, or type it in.' });
       return null;
     }
-    const refs = evs.map(() => h.ref.collection('events').doc());
-    const evRef = refs[0];
+    const existing = (await h.ref.collection('events').get()).docs.map(d => ({ id: d.id, ...d.data() }));
+    // Friends we know from earlier years: fill in what the invite doesn't say.
+    const known = friendsFrom(existing, today);
+    for (const ev of evs) {
+      const f = known.find(x => samePerson({ friend: x.name, child: x.child }, ev));
+      if (!f) continue;
+      if (!ev.child && f.child) ev.child = f.child;
+      if (!ev.friendGender && f.gender) ev.friendGender = f.gender;
+      if (f.interests) ev.interests = f.interests;
+      if (!ev.friendAge && isDay(ev.date)) ev.friendAge = turningOn(f, ev.date);
+    }
+    for (const ev of evs) ev.child ||= evs.find(x => x.child)?.child || '';
     const batch = h.ref.firestore.batch();
+    const events = h.ref.collection('events');
+    const twins = evs.map(ev => findDuplicate(existing, ev));
+    const twin = twins.find(Boolean);
+    if (twin) {
+      // Already there. Fill its gaps, and add any birthday child the invite has that the party doesn't.
+      const groupId = twin.groupId || twin.id;
+      const group = existing.filter(x => x.id === twin.id || (twin.groupId && x.groupId === twin.groupId));
+      const fresh = evs.filter((_, i) => !twins[i]);
+      const gaps = Object.fromEntries(PARTY_FIELDS.filter(k => !twin[k] && evs[0][k]).map(k => [k, evs[0][k]]));
+      for (const x of group) {
+        const mine = evs[twins.findIndex(t => t?.id === x.id)] || {};
+        const fill = { ...gaps, ...(!x.friendAge && mine.friendAge ? { friendAge: mine.friendAge } : {}), ...(!x.friendGender && mine.friendGender ? { friendGender: mine.friendGender } : {}),
+          ...(!x.scanId ? { scanId: ref.id } : {}), ...(fresh.length ? { groupId, groupOrder: x.groupOrder ?? 0 } : {}) };
+        if (Object.keys(fill).length) batch.update(events.doc(x.id), fill);
+      }
+      let order = Math.max(0, ...group.map(x => x.groupOrder ?? 0));
+      const { present, reminded, products, id, friend, friendAge, friendGender, interests, noPresent, ...party } = twin;
+      for (const ev of fresh) batch.set(events.doc(), { ...party, friend: ev.friend, friendAge: ev.friendAge, friendGender: ev.friendGender, interests: ev.interests || '', groupId, groupOrder: ++order, needsCheck: true, scanId: ref.id, createdBy: scan.by || null, createdAt: now });
+      batch.update(ref, { state: 'done', eventId: twin.id, duplicate: true, doneAt: now });
+      await batch.commit();
+      return twin.id;
+    }
+    const refs = evs.map(() => events.doc());
+    const evRef = refs[0];
     refs.forEach((rf, i) => batch.set(rf, { ...evs[i], needsCheck: true, scanId: ref.id, readProblem: r.problem || '', createdBy: scan.by || null, createdAt: now, ...(evs.length > 1 ? { groupId: evRef.id, groupOrder: i } : {}) }));
     batch.update(ref, { state: 'done', eventId: evRef.id, doneAt: now });
     await batch.commit();
@@ -49,20 +87,35 @@ export async function processScan(h, ref, now = new Date()) {
   }
 }
 
-// "Ask Claude for ideas": new ideas join the household's ideas, so they're there next time.
+// "Ask Claude". For ideas (kinds of present): new ones join the household's
+// ideas, so they're there next time. For products (kind: 'products'): real
+// things in the shops today, saved on the party so you both see them.
 export async function processAsk(h, ref, now = new Date()) {
   if (!(await claim(ref))) return null;
   const a = (await ref.get()).data();
   try {
+    let given = [];
+    if (a.friend) {
+      const events = (await h.ref.collection('events').get()).docs.map(d => ({ id: d.id, ...d.data() }));
+      given = pastPresents(events, a.friend, a.eventId, null, a.child || '').map(p => p.name);
+    }
+    if (a.kind === 'products') {
+      const products = await findProducts(a, given);
+      if (!products.length) {
+        await ref.update({ state: 'failed', message: 'nothing suitable turned up' });
+        return null;
+      }
+      const batch = h.ref.firestore.batch();
+      const evRef = a.eventId ? h.ref.collection('events').doc(a.eventId) : null;
+      if (evRef && (await evRef.get()).exists) batch.update(evRef, { products: { at: now.toISOString(), hint: a.hint || '', items: products } });
+      batch.update(ref, { state: 'done', products, doneAt: now });
+      await batch.commit();
+      return products;
+    }
     const ideasSnap = await h.ref.collection('ideas').get();
     const saved = ideasSnap.docs.map(d => ({ id: d.id, ...d.data() }));
     const byId = new Map(saved.map(i => [i.id, i]));
     const byName = new Map(saved.map(i => [String(i.name).toLowerCase().trim(), i]));
-    let given = [];
-    if (a.friend) {
-      const events = (await h.ref.collection('events').get()).docs.map(d => ({ id: d.id, ...d.data() }));
-      given = pastPresents(events, a.friend, a.eventId).map(p => p.name);
-    }
     const ideas = await suggestIdeas(a, saved, given);
     const out = [];
     const batch = h.ref.firestore.batch();
@@ -83,42 +136,46 @@ export async function processAsk(h, ref, now = new Date()) {
     await batch.commit();
     return out;
   } catch (e) {
-    console.error('Asking for ideas failed', e);
+    console.error('Asking Claude failed', e);
     await ref.update({ state: 'failed', message: plainError(e) });
     return null;
   }
 }
 
 // Every morning: reminders for parties coming up (functions/index.mjs runs it at 8am UK time).
+// A reminder only counts as sent once it reached a phone, so if nobody has
+// notifications on yet it's tried again the next morning.
 export async function sendReminders(db, now = new Date()) {
   const today = iso(now);
   let sent = 0;
   for (const h of await households(db)) {
     const hd = h.data();
     const settings = { ...DEFAULT_REMINDERS, ...(hd.reminders || {}) };
-    const until = addDays(today, Math.max(settings.first || 0, settings.second || 0, 2) + 31);
-    const snap = await h.ref.collection('events').where('date', '>=', today).where('date', '<=', until).get();
+    const snap = await h.ref.collection('events').where('date', '>=', today).get();
     const all = snap.docs.map(d => ({ id: d.id, ref: d.ref, ...d.data() }));
     // A joint party is one event per birthday child: each child's present gets
     // its own reminders, but the reply and morning-of reminders are sent once.
-    const once = new Set();
+    const once = new Map();
     for (const e of all) {
       const due = dueReminders(e, today, settings, hd.children || []);
       if (!due.length) continue;
       const update = {};
       for (let r of due) {
-        update[`reminded.${r.kind}`] = now;
-        if (e.groupId && ['rsvp', 'dayOf'].includes(r.kind)) {
-          const key = `${e.groupId}-${r.kind}`;
-          if (once.has(key)) continue;
-          once.add(key);
-          const sibs = all.filter(x => x.groupId === e.groupId).sort((a, b) => (a.groupOrder ?? 0) - (b.groupOrder ?? 0));
-          if (r.kind === 'dayOf' && sibs.length > 1) r = jointDayOf(sibs);
+        const key = e.groupId && ['rsvp', 'dayOf'].includes(r.kind) ? `${e.groupId}-${r.kind}` : null;
+        let reached;
+        if (key && once.has(key)) reached = once.get(key);
+        else {
+          if (key) {
+            const sibs = all.filter(x => x.groupId === e.groupId).sort((a, b) => (a.groupOrder ?? 0) - (b.groupOrder ?? 0));
+            if (r.kind === 'dayOf' && sibs.length > 1) r = jointDayOf(sibs);
+          }
+          reached = await notify(h, { title: r.title, body: r.body, link: `#/event/${e.id}`, tag: `${e.id}-${r.kind}` });
+          if (key) once.set(key, reached);
+          if (reached) sent++;
         }
-        await notify(h, { title: r.title, body: r.body, link: `#/event/${e.id}`, tag: `${e.id}-${r.kind}` });
-        sent++;
+        if (reached) update[`reminded.${r.kind}`] = now;
       }
-      await e.ref.update(update);
+      if (Object.keys(update).length) await e.ref.update(update);
     }
   }
   return sent;

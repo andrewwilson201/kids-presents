@@ -5,21 +5,23 @@
 //   presentUsers/{uid}                 { householdId, name }
 //   invites/{code}                     { hid, name }
 //   households/{hid}                   { name, members[], memberNames{uid:name}, inviteCode, children[{id,name,gender,birthday?,age?,ageOn?}],
-//                                        budget, reminders{first,second,dayOf}, feedKey, createdAt }
+//                                        budget, reminders{first,second,dayOf}, feedKey, friendSnooze{key:year}, createdAt }
 //   households/{hid}/events/{id}       a party or a birthday: { kind, child, friend, friendAge, friendGender, interests, date, start, end,
 //                                        venue, address, rsvpBy, rsvp, contact, theme, notes, budget, card, cancelled, needsCheck, scanId,
-//                                        present{state: chosen|bought|wrapped, name, ideaId, price, where, cupboardId, by{uid,name}, at}, reminded{} }
+//                                        present{state: chosen|bought|wrapped, name, ideaId, price, where, url, shop, cupboardId, by{uid,name}, at}, reminded{},
+//                                        products{at, items[{title, price, shop, url, why}]} real products Claude found in the shops }
 //                                      a joint party is one event per birthday child, sharing groupId (+ groupOrder): js/gifts.js
 //   households/{hid}/ideas/{id}        present ideas: { name, description, price, ageMin, ageMax, for, interests[], category, search, source, given, liked, hidden }
 //   households/{hid}/cupboard/{id}     presents bought ahead: { name, price, ageMin, ageMax, for, notes, by, usedFor, createdAt }
-//   households/{hid}/scans/{id}        an invite picture for Claude to read: { image (data URL), state: requested|done|failed, by, eventId, message }
-//   households/{hid}/asks/{id}         "Ask Claude for ideas": { budget, gender, age, interests, eventId, state, ideas[], by }
+//   households/{hid}/scans/{id}        an invite for Claude to read: { text?, state: requested|done|failed, by, eventId, duplicate, message }
+//   households/{hid}/scanImages/{id}   the invite's picture, same id as its scan: { image (data URL) }
+//   households/{hid}/asks/{id}         "Ask Claude": { kind: ideas|products, budget, gender, age, interests, hint, eventId, state, ideas[] | products[], by }
 //   households/{hid}/devices/{id}      phones that get notifications: { token, uid, name, ua, createdAt }
 
 import {
   initializeApp, getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult,
   signOut as fbSignOut, connectAuthEmulator, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
-  doc, getDoc, getDocs, setDoc, updateDoc, addDoc, deleteDoc, collection, query, orderBy, limit, onSnapshot, serverTimestamp, runTransaction,
+  doc, getDoc, setDoc, updateDoc, addDoc, deleteDoc, collection, query, orderBy, limit, onSnapshot, serverTimestamp, runTransaction,
   arrayUnion, deleteField, writeBatch, connectFirestoreEmulator, getMessaging, getToken, deleteToken, messagingSupported,
 } from '../vendor/firebase.js';
 import { FIREBASE_CONFIG, VAPID_KEY } from './config.js';
@@ -171,20 +173,13 @@ export async function claimPresent(eventId, present) {
   });
 }
 
-// Everything the household has, as one JSON file (Settings › Download your data).
-export async function exportAll() {
-  const plain = v => v && typeof v.toDate === 'function' ? v.toDate().toISOString() : Array.isArray(v) ? v.map(plain) : v && typeof v === 'object' ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, plain(x)])) : v;
-  const { feedKey, inviteCode, ...h } = state.household;
-  const out = { exportedAt: new Date().toISOString(), household: plain(h) };
-  for (const name of ['events', 'ideas', 'cupboard']) {
-    const snap = await getDocs(collection(db, hpath(name)));
-    out[name] = snap.docs.map(d => ({ id: d.id, ...plain(d.data()) }));
-  }
-  return out;
-}
-export async function getScan(id) {
-  const snap = await getDoc(doc(db, hpath('scans', id)));
-  return snap.exists() ? { id, ...snap.data() } : null;
+// An invite's picture is kept apart from its scan (scanImages/{scan id}), so
+// the app doesn't download every recent picture each time it opens.
+export async function getScanImage(id) {
+  const pic = await getDoc(doc(db, hpath('scanImages', id)));
+  if (pic.exists()) return pic.data().image || '';
+  const old = await getDoc(doc(db, hpath('scans', id))); // scans from before the pictures moved
+  return old.exists() ? old.data().image || '' : '';
 }
 
 // ---------- phone notifications ----------

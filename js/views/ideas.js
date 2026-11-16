@@ -1,13 +1,13 @@
 // Ideas: the present ideas database. Filter by budget, boy or girl, age and
 // interests; ask Claude for fresh ones (they're saved here too); like the good
-// ones, hide the duds, add your own. From a party (#/ideas/{eventId}) the
+// ones, hide the duds, add your own. The present cupboard sits beside it (js/views/cupboard.js). From a party (#/ideas/{eventId}) the
 // filters start from that party and picking an idea sets it as the present.
-import * as S from '../store.js?v=2';
-import { matchIdeas, shopLinks, searchFor, pastPresents } from '../gifts.js?v=2';
-import { icon } from '../ui.js?v=2';
-import { st, esc, head, section, run, toast, money, empty, plural, routes, actions, arg, render, keep, hooks } from '../core.js?v=2';
-import { eventTitle, firstName, children, priceText } from '../events.js?v=2';
-import { queryFor } from './event.js?v=2';
+import * as S from '../store.js?v=3';
+import { matchIdeas, shopLinks, searchFor, pastPresents } from '../gifts.js?v=3';
+import { icon } from '../ui.js?v=3';
+import { st, esc, head, section, run, toast, money, empty, plural, routes, actions, arg, render, keep, hooks, busy, failed } from '../core.js?v=3';
+import { eventTitle, firstName, children, priceText } from '../events.js?v=3';
+import { queryFor, findProducts } from './event.js?v=3';
 
 const BUDGETS = [5, 10, 15, 20, 25, 30];
 let filters = null, filtersFor = null, showAll = false;
@@ -29,9 +29,9 @@ function ideaRow(i, e, why = '') {
     <span class="grow"><span class="name">${esc(i.name)}${i.liked ? ` <span class="liked">${icon('heart')}</span>` : ''}${i.source === 'claude' ? ' <span class="chip new tiny-chip">Claude</span>' : ''}</span>
       <span class="meta">${esc([priceText(i), ageLabel(i), i.for && i.for !== 'any' ? `${i.for}s` : ''].filter(Boolean).join(' · '))}</span>
       ${why || i.description ? `<span class="meta desc">${esc(why || i.description)}</span>` : ''}
-      <details class="mini shops"><summary>Shops &amp; more</summary>
+      <details class="mini shops"><summary>Shops, like, hide</summary>
         <div class="row">${shopLinks(searchFor(i)).map(l => `<a class="chip link" href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.name)} ${icon('external')}</a>`).join('')}</div>
-        <div class="row" style="margin-top:8px"><button class="btn small ghost" data-act="likeIdea" data-id="${esc(i.id)}">${icon('heart')} ${i.liked ? 'Unlike' : 'Like'}</button>
+        <div class="row" style="margin-top:8px">${e ? `<button class="btn small tonal" data-act="findLike" data-id="${esc(i.id)}">${icon('search')} Find real ones in the shops</button>` : ''}<button class="btn small ghost" data-act="likeIdea" data-id="${esc(i.id)}">${icon('heart')} ${i.liked ? 'Unlike' : 'Like'}</button>
         <button class="btn small ghost" data-act="toCupboard" data-id="${esc(i.id)}">${icon('box')} Bought one for the cupboard</button>
         <button class="btn small ghost danger" data-act="hideIdea" data-id="${esc(i.id)}">Hide</button></div></details></span>
     ${e ? `<button class="btn small tonal" data-act="pickForEvent" data-id="${esc(i.id)}">I'll get this</button>` : ''}</li>`;
@@ -40,29 +40,31 @@ function ideaRow(i, e, why = '') {
 routes.ideas = () => {
   const { e, f } = current();
   const sorted = e && ['chosen', 'bought', 'wrapped'].includes(e.present?.state);
-  const given = new Set(e ? pastPresents(st.events, e.friend, e.id).map(p => p.ideaId).filter(Boolean) : []);
+  const given = new Set(e ? pastPresents(st.events, e.friend, e.id, null, e.child).map(p => p.ideaId).filter(Boolean) : []);
   const list = matchIdeas(st.ideas, f, { limit: 60, given });
-  const ask = st.asks.find(a => (e ? a.eventId === e.id : !a.eventId));
+  const ask = st.asks.find(a => a.kind !== 'products' && (e ? a.eventId === e.id : !a.eventId));
+  const budgets = [...new Set([...BUDGETS, Number(f.budget) || 15])].sort((x, y) => x - y);
+  const free = st.cupboard.filter(c => !c.usedFor).length;
   const byId = new Map(st.ideas.map(i => [i.id, i]));
   const claude = ask?.state === 'done' ? (ask.ideas || []).map(x => ({ idea: byId.get(x.ideaId), why: x.why })).filter(x => x.idea) : [];
   const hidden = st.ideas.filter(i => i.hidden).length;
   return `${head(e ? `Ideas for ${esc(firstName(e.friend) || 'the party')}` : 'Present ideas', { eyebrow: e ? `<a href="#/event/${esc(e.id)}">${icon('back')} ${esc(eventTitle(e))}</a>` : `${plural(st.ideas.filter(i => !i.hidden).length, 'idea')} saved`,
     sub: sorted ? `${esc(e.present.name || 'A present')} is already sorted for this one.` : '' })}
+    ${e ? '' : `<div class="seg"><a class="on" href="#/ideas">Ideas</a><a href="#/cupboard">Cupboard${free ? ` (${free})` : ''}</a></div>`}
     <form class="card filters" data-form="filter">
-      <div class="seg budgets" role="group" aria-label="Budget">${BUDGETS.map(b => `<button type="button" class="${Number(f.budget) === b ? 'on' : ''}" data-act="budget" data-id="${b}">${money(b)}</button>`).join('')}</div>
-      <div class="three"><label class="field">For<select name="gender" data-change="filterNow"><option value="">Anyone</option><option value="girl"${f.gender === 'girl' ? ' selected' : ''}>A girl</option><option value="boy"${f.gender === 'boy' ? ' selected' : ''}>A boy</option></select></label>
-        <label class="field">Age<input type="number" name="age" min="1" max="16" inputmode="numeric" value="${esc(f.age ?? '')}" placeholder="Any" data-change="filterNow"></label>
-        <label class="field">Up to £<input type="number" name="budget" min="1" inputmode="decimal" value="${esc(f.budget ?? '')}" data-change="filterNow"></label></div>
+      <div class="seg budgets" role="group" aria-label="Budget">${budgets.map(b => `<button type="button" class="${Number(f.budget) === b ? 'on' : ''}" data-act="budget" data-id="${b}">${money(b)}</button>`).join('')}</div>
+      <div class="two"><label class="field">For<select name="gender" data-change="filterNow"><option value="">Anyone</option><option value="girl"${f.gender === 'girl' ? ' selected' : ''}>A girl</option><option value="boy"${f.gender === 'boy' ? ' selected' : ''}>A boy</option></select></label>
+        <label class="field">Age<input type="number" name="age" min="1" max="16" inputmode="numeric" value="${esc(f.age ?? '')}" placeholder="Any" data-change="filterNow"></label></div>
       <label class="field">Into<input type="text" name="interests" value="${esc(f.interests || '')}" placeholder="dinosaurs, art, football" data-change="filterNow"></label>
-      <div class="row">${ask?.state === 'requested' ? '<span class="btn outline" aria-busy="true"><span class="spinner"></span> Claude is thinking…</span>' : `<button type="button" class="btn primary" data-act="askIdeas">${icon('sparkle')} Ask Claude for ideas</button>`}
-      <span class="small muted grow">Claude's ideas are saved here for next time.</span></div>
+      <div class="row">${busy(ask) ? '<span class="btn outline" aria-busy="true"><span class="spinner"></span> Claude is thinking…</span>' : `<button type="button" class="btn primary" data-act="askIdeas">${icon('sparkle')} Ask Claude for ideas</button>`}
+      <span class="small muted grow">Claude's ideas are saved here for next time.${e ? ' For real products with prices, open an idea and tap Find real ones.' : ''}</span></div>
     </form>
-    ${ask?.state === 'failed' ? `<div class="notice danger">${icon('alert')}<span class="grow">Claude couldn't come up with ideas: ${esc(ask.message || 'something went wrong')}.</span></div>` : ''}
+    ${failed(ask) ? `<div class="notice danger">${icon('alert')}<span class="grow">Claude couldn't come up with ideas: ${esc(ask.message || 'something went wrong')}.</span></div>` : ''}
     ${claude.length ? `${section('From Claude', { count: claude.length })}<ul class="list card ideas">${claude.map(x => ideaRow(x.idea, e && !sorted ? e : null, x.why)).join('')}</ul>` : ''}
     ${section('From your ideas', { count: list.length })}
     ${list.length ? `<ul class="list card ideas">${list.slice(0, showAll ? 999 : 15).map(i => ideaRow(i, e && !sorted ? e : null)).join('')}</ul>
       ${!showAll && list.length > 15 ? `<button class="btn ghost block" data-act="showAllIdeas">Show all ${list.length}</button>` : ''}` : empty('gift', 'Nothing fits', 'Try a bigger budget, fewer interests, or ask Claude.')}
-    <details class="disclosure card" data-toggle="addIdea"><summary>${icon('plus')} Add your own idea</summary>
+    <details class="disclosure card" data-toggle="addIdea"${keep.addIdea ? ' open' : ''}><summary>${icon('plus')} Add your own idea</summary>
       <form data-form="addIdea" class="stack" style="margin-top:12px"><label class="field">What<input type="text" name="name" required placeholder="Hama beads set" data-keep="idea.name"></label>
         <div class="three"><label class="field">About £<input type="number" name="price" inputmode="decimal" data-keep="idea.price"></label><label class="field">From age<input type="number" name="ageMin" inputmode="numeric" data-keep="idea.ageMin"></label><label class="field">To age<input type="number" name="ageMax" inputmode="numeric" data-keep="idea.ageMax"></label></div>
         <div class="two"><label class="field">For<select name="for"><option value="any">Anyone</option><option value="girl">Girls</option><option value="boy">Boys</option></select></label>
@@ -73,7 +75,7 @@ routes.ideas = () => {
 
 const readFilters = () => {
   const f = document.querySelector('form[data-form=filter]'); if (!f) return;
-  filters = { ...filters, gender: f.gender.value, age: f.age.value === '' ? null : Number(f.age.value), budget: Number(f.budget.value) || null, interests: f.interests.value.trim() };
+  filters = { ...filters, gender: f.gender.value, age: f.age.value === '' ? null : Number(f.age.value), interests: f.interests.value.trim() };
 };
 actions.showAllIdeas = () => { showAll = true; render(); };
 actions.filterNow = () => { readFilters(); render(); };
@@ -82,7 +84,7 @@ actions.budget = el => { readFilters(); filters.budget = Number(el.dataset.id); 
 actions.askIdeas = () => {
   readFilters();
   const { e, f } = current();
-  run(() => S.addH(['asks'], { ...f, friend: e?.friend || '', eventId: e?.id || '', state: 'requested', by: S.me(), createdAt: S.serverTimestamp() }), 'Asked Claude. Ideas in a few seconds.');
+  run(() => S.addH(['asks'], { kind: 'ideas', ...f, friend: e?.friend || '', child: e?.child || '', eventId: e?.id || '', state: 'requested', by: S.me(), createdAt: S.serverTimestamp() }), 'Asked Claude. Ideas in a few seconds.');
 };
 actions.pickForEvent = el => {
   const i = st.ideas.find(x => x.id === el.dataset.id); if (!i) return;
@@ -91,6 +93,11 @@ actions.pickForEvent = el => {
     catch (err) { if (err.code === 'claimed') { toast(err.message); return; } throw err; }
     location.hash = `#/event/${arg}`;
   }, 'Noted. You\'re getting it.');
+};
+// Real products of this kind, for the party: Claude searches the shops and they show on the party's page.
+actions.findLike = el => {
+  const i = st.ideas.find(x => x.id === el.dataset.id); const { e } = current(); if (!i || !e) return;
+  run(async () => { await findProducts(e, i.name); location.hash = `#/event/${e.id}`; }, 'Claude is looking in the shops');
 };
 actions.likeIdea = el => { const i = st.ideas.find(x => x.id === el.dataset.id); run(() => S.updateH(['ideas', i.id], { liked: !i.liked })); };
 actions.hideIdea = el => run(() => S.updateH(['ideas', el.dataset.id], { hidden: true }), 'Hidden');

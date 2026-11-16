@@ -1,11 +1,11 @@
-// One party: the details, whether you're going, and the present: ideas, who's
-// getting it, bought, wrapped. Claiming a present is a transaction (store.js
+// One party: the details, whether you're going, and the present: real products
+// Claude found in the shops, ideas, who's getting it, bought, wrapped. Claiming a present is a transaction (store.js
 // claimPresent), so you can't both end up buying one.
-import * as S from '../store.js?v=2';
-import { matchIdeas, pastPresents, ageOn, childrenFor, fmt12, shopLinks, needsPresent, presentSorted, daysBetween, isDay } from '../gifts.js?v=2';
-import { icon, childBadge } from '../ui.js?v=2';
-import { st, esc, head, section, run, toast, money, fmtLong, today, routes, actions, arg, render } from '../core.js?v=2';
-import { children, eventTitle, partyTitle, sibs, whenWords, presentChip, budgetOf, firstName, priceText } from '../events.js?v=2';
+import * as S from '../store.js?v=3';
+import { matchIdeas, pastPresents, ageOn, childrenFor, fmt12, shopLinks, needsPresent, presentSorted, daysBetween, isDay } from '../gifts.js?v=3';
+import { icon, childBadge } from '../ui.js?v=3';
+import { st, esc, head, section, run, toast, money, fmtLong, fmtDay, today, routes, actions, arg, render, busy, failed, keep, hostOf } from '../core.js?v=3';
+import { children, eventTitle, partyTitle, sibs, whenWords, presentChip, budgetOf, firstName, priceText } from '../events.js?v=3';
 
 const ev = () => st.events.find(x => x.id === arg);
 
@@ -15,19 +15,21 @@ export function queryFor(e) {
   const age = e.friendAge ? Number(e.friendAge) : kid ? ageOn(kid, isDay(e.date) ? e.date : today()) : null;
   return { budget: budgetOf(e), gender: e.friendGender || '', age, interests: e.interests || '' };
 }
-const given = e => new Set(pastPresents(st.events, e.friend, e.id).map(p => p.ideaId).filter(Boolean));
+const given = e => new Set(pastPresents(st.events, e.friend, e.id, null, e.child).map(p => p.ideaId).filter(Boolean));
+const safeUrl = u => (/^https:\/\//.test(u || '') ? u : '');
 
-let invitePics = {}; // scan id -> image, loaded when asked for
+let invitePics = {}; // scan id -> image ('none' for a text invite), loaded when asked for
 routes.event = () => {
   const e = ev();
   if (!e) return `${head('Not found')}<p class="muted">That party has been deleted.</p><a class="btn" href="#/home">Back to parties</a>`;
   const days = isDay(e.date) ? daysBetween(today(), e.date) : null;
   const time = e.start ? `${fmt12(e.start)}${e.end ? ` to ${fmt12(e.end)}` : ''}` : '';
   const map = e.address || e.venue ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([e.venue, e.address].filter(Boolean).join(', '))}` : '';
-  const before = pastPresents(st.events, e.friend, e.id, e.date);
+  const before = pastPresents(st.events, e.friend, e.id, e.date, e.child);
   const joint = sibs(e);
+  const pic = invitePics[e.scanId];
   return `${head(esc(partyTitle(e)), { eyebrow: childBadge(children(), e.child), sub: isDay(e.date) ? `${fmtLong(e.date)}${time ? `, ${time}` : ''} · ${whenWords(e.date)}` : 'No date yet' })}
-    ${e.needsCheck ? `<div class="notice warn">${icon('info')}<span class="grow"><b>Read from an invite picture</b><br>Check the details are right${e.child ? '' : ', and say who\'s invited'}.</span></div>
+    ${e.needsCheck ? `<div class="notice warn">${icon('info')}<span class="grow"><b>Read from an invite</b><br>Check the details are right${e.child ? '' : ', and say who\'s invited'}.${e.readProblem ? ` Claude wasn't sure: ${esc(e.readProblem)}` : ''}</span></div>
       <div class="row" style="margin:-4px 0 16px">${e.child ? `<button class="btn primary small" data-act="looksRight">${icon('check')} Looks right</button>` : ''}<a class="btn tonal small" href="#/edit/${esc(e.id)}">${icon('edit')} Change details</a></div>` : ''}
     ${!e.child ? `<div class="card"><b>Who's invited?</b><div class="row" style="margin-top:10px">${children().map(c => `<button class="btn tonal" data-act="setChild" data-id="${esc(c.id)}">${esc(c.name)}</button>`).join('')}${children().length > 1 ? '<button class="btn tonal" data-act="setChild" data-id="both">Both</button>' : ''}</div></div>` : ''}
 
@@ -45,52 +47,61 @@ routes.event = () => {
       ${e.kind !== 'birthday' ? `<li>${icon('message')}<span class="grow"><b>${e.rsvp === 'yes' ? 'Going' : e.rsvp === 'no' ? 'Not going' : 'Not replied yet'}</b>${e.rsvpBy || e.contact ? `<br><span class="muted">${esc([e.rsvpBy ? `Reply by ${fmtLong(e.rsvpBy)}` : '', e.contact].filter(Boolean).join(' · '))}</span>` : ''}</span>
         <span class="seg small"><button class="${e.rsvp === 'yes' ? 'on' : ''}" data-act="rsvp" data-id="yes">Going</button><button class="${e.rsvp === 'no' ? 'on' : ''}" data-act="rsvp" data-id="no">Can't go</button></span></li>` : ''}
     </ul>
-    ${e.scanId ? `<details class="disclosure card flush" data-toggle="invite" data-scan="${esc(e.scanId)}"><summary>${icon('image')} The invite picture</summary>
-      <div class="invite-pic">${invitePics[e.scanId] ? `<img src="${esc(invitePics[e.scanId])}" alt="The invite">` : '<span class="spinner"></span>'}</div></details>` : ''}
+    ${e.scanId ? `<details class="disclosure card flush" data-toggle="invite" data-scan="${esc(e.scanId)}"${keep.invite ? ' open' : ''}><summary>${icon('image')} The invite</summary>
+      <div class="invite-pic">${pic === 'none' ? '<p class="small muted" style="padding:0 16px">This one came as a message, so there\'s no picture.</p>' : pic ? `<img src="${esc(pic)}" alt="The invite">` : '<span class="spinner"></span>'}</div></details>` : ''}
 
-    ${before.length ? `${section(`Given to ${esc(firstName(e.friend))} before`)}<ul class="list card">${before.map(p => `<li>${icon('gift')}<span class="grow">${esc(p.name)}<span class="meta">${esc(fmtLong(p.date))}</span></span></li>`).join('')}</ul>` : ''}
+    ${before.length ? `${section(`Given to ${esc(firstName(e.friend))} before`)}<ul class="list card">${before.map(p => `<li>${icon('gift')}<span class="grow">${esc(p.name)}<span class="meta">${esc(fmtDay(p.date, { day: 'numeric', month: 'long', year: 'numeric' }))}</span></span></li>`).join('')}</ul>` : ''}
 
-    <div class="row" style="margin-top:28px">
-      ${e.cancelled ? '<button class="btn ghost small" data-act="uncancel">It\'s back on</button>' : '<button class="btn ghost small" data-act="cancelEvent">Party cancelled</button>'}
-      ${!e.noPresent ? '<button class="btn ghost small" data-act="noPresent">No present needed</button>' : '<button class="btn ghost small" data-act="noPresent">A present is needed</button>'}
-      <span class="spacer"></span><button class="btn ghost small danger" data-act="deleteEvent">${icon('trash')} Delete</button></div>`;
+    <details class="disclosure card flush more" data-toggle="more"${keep.more ? ' open' : ''}><summary>More</summary><div class="stack" style="padding:14px 16px">
+      ${e.cancelled ? '<button class="btn outline block" data-act="uncancel">The party is back on</button>' : '<button class="btn outline block" data-act="cancelEvent">The party is cancelled</button>'}
+      <button class="btn outline block" data-act="noPresent">${e.noPresent ? 'A present is needed after all' : 'No present needed for this one'}</button>
+      <button class="btn outline block danger" data-act="deleteEvent">${icon('trash')} Delete this party</button></div></details>`;
 };
+
+const shopChips = name => `<div class="row shops"><span class="small muted">Search for it:</span>${shopLinks(name).map(l => `<a class="chip link" href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.name)} ${icon('external')}</a>`).join('')}</div>`;
+const productLink = p => (safeUrl(p.url) ? `<a class="btn small tonal" href="${esc(p.url)}" target="_blank" rel="noopener">${icon('external')} Open at ${esc(p.shop || hostOf(p.url))}</a>` : '');
 
 function presentCard(e, days, title) {
   const p = e.present || {};
   const mine = p.by?.uid === st.user.uid;
   const by = p.by?.name ? firstName(p.by.name) : 'Someone';
-  const links = name => `<details class="mini shops"><summary>Find it in a shop</summary><div class="row">${shopLinks(name).map(l => `<a class="chip link" href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.name)} ${icon('external')}</a>`).join('')}</div></details>`;
   if (!needsPresent(e)) return `<div class="card soft">${presentChip(e)}</div>`;
   if (p.state === 'bought' || p.state === 'wrapped') {
     return `${section(title)}<div class="card present done"><div class="row nowrap" style="gap:12px"><span class="tile veg">${icon('gift')}</span>
       <span class="grow"><b>${esc(p.name || 'A present')}</b><br><span class="small muted">Bought by ${mine ? 'you' : esc(by)}${p.price ? `, ${money(p.price)}` : ''}${p.where ? ` from ${esc(p.where)}` : ''}${p.cupboardId ? ' (from the cupboard)' : ''}</span></span></div>
-      <div class="checks"><label class="row nowrap"><input type="checkbox" class="check" data-change="wrapped" ${p.state === 'wrapped' ? 'checked' : ''}> Wrapped</label>
-      <label class="row nowrap"><input type="checkbox" class="check" data-change="card" ${e.card ? 'checked' : ''}> Card written</label></div>
+      <div class="checks"><label class="row nowrap"><input type="checkbox" class="check" data-change="wrapped" ${p.state === 'wrapped' ? 'checked' : ''}> Wrapped, with a card</label></div>
       <button class="btn ghost small" data-act="undoPresent">Undo</button></div>`;
   }
   if (p.state === 'chosen') {
     return `${section(title)}<div class="card present chosen"><div class="row nowrap" style="gap:12px"><span class="tile other">${icon('bag')}</span>
       <span class="grow"><b>${esc(p.name || 'A present')}</b><br><span class="small muted">${mine ? 'You said you\'d get this' : `${esc(by)} is getting this`}${p.price ? `, about ${money(p.price)}` : ''}</span></span></div>
-      ${mine ? `<form data-form="bought" class="row bought-form"><input type="text" name="where" placeholder="Where from (optional)" aria-label="Where from" data-keep="where"><input type="number" name="price" placeholder="£" aria-label="Price" inputmode="decimal" style="max-width:90px" value="${esc(p.price || '')}"><button class="btn primary">${icon('check')} Bought it</button></form>
-        ${links(p.name || '')}<button class="btn ghost small" data-act="undoPresent">Change my mind</button>`
+      ${safeUrl(p.url) ? `<div class="row shops">${productLink(p)}</div>` : mine ? shopChips(p.name || '') : ''}
+      ${mine ? `<form data-form="bought" class="row bought-form"><input type="text" name="where" placeholder="Where from (optional)" aria-label="Where from" data-keep="where" value="${esc(p.shop || '')}"><input type="number" name="price" placeholder="£" aria-label="Price" inputmode="decimal" step="any" style="max-width:90px" value="${esc(p.price || '')}"><button class="btn primary">${icon('check')} Bought it</button></form>
+        <button class="btn ghost small" data-act="undoPresent">Change my mind</button>`
         : `<div class="row"><button class="btn ghost small" data-act="takeOver">I'll get it instead</button></div>`}</div>`;
   }
-  // Nothing yet: ideas that fit, the cupboard, or type your own.
+  // Nothing yet: the cupboard, real products from the shops, ideas that fit, or type your own.
   const q = queryFor(e);
-  const ideas = matchIdeas(st.ideas, q, { limit: 5, given: given(e) });
+  const ideas = matchIdeas(st.ideas, q, { limit: 4, given: given(e) });
   const inCupboard = st.cupboard.filter(c => !c.usedFor && (!c.for || c.for === 'any' || !q.gender || c.for === q.gender) && (q.age == null || ((c.ageMin ?? 0) <= q.age && (c.ageMax ?? 99) >= q.age)));
-  const ask = st.asks.find(a => a.eventId === e.id);
+  const ask = st.asks.find(a => a.eventId === e.id && a.kind === 'products');
+  const found = e.products?.items || [];
   const urgent = days != null && days <= (st.household?.reminders?.second ?? 3);
   return `${section(title)}<div class="card present">
-    <p class="small ${urgent ? 'danger-text' : 'muted'}" style="margin:0 0 12px">${urgent ? `${icon('alert')} ` : ''}Nobody's getting one yet. ${q.age ? `Ideas for a ${q.age}-year-old${q.gender ? ` ${q.gender}` : ''}` : 'Ideas'} up to ${money(q.budget)}${q.interests ? `, into ${esc(q.interests)}` : ''}:</p>
+    <p class="small ${urgent ? 'danger-text' : 'muted'}" style="margin:0 0 12px">${urgent ? `${icon('alert')} ` : ''}Nobody's getting one yet. ${q.age ? `For a ${q.age}-year-old${q.gender ? ` ${q.gender}` : ''}` : 'Presents'} up to ${money(q.budget)}${q.interests ? `, into ${esc(q.interests)}` : ''}.</p>
     ${inCupboard.length ? `<p class="small" style="margin:0 0 6px"><b>In the cupboard</b></p><ul class="list compact ideas">${inCupboard.map(c => `<li><span class="grow"><span class="name">${esc(c.name)}</span><span class="meta">${esc(priceText(c))}</span></span><button class="btn small primary" data-act="useCupboard" data-id="${esc(c.id)}">Use this</button></li>`).join('')}</ul>` : ''}
-    <ul class="list compact ideas">${ideas.map(i => `<li><span class="grow"><span class="name">${esc(i.name)}</span><span class="meta">${esc([priceText(i), i.description].filter(Boolean).join(' · '))}</span></span><button class="btn small tonal" data-act="chooseIdea" data-id="${esc(i.id)}">I'll get this</button></li>`).join('') || '<li class="muted small">No saved ideas fit. Try Claude, or widen the budget.</li>'}</ul>
-    <div class="row" style="margin:10px 0 14px">
-      ${ask?.state === 'requested' ? `<a class="btn outline" href="#/ideas/${esc(e.id)}"><span class="spinner"></span> Claude is thinking…</a>` : `<button class="btn outline" data-act="askClaude">${icon('sparkle')} Ask Claude for ideas</button>`}
-      <a class="btn ghost" href="#/ideas/${esc(e.id)}">More ideas</a></div>
+    ${found.length ? `<p class="small" style="margin:0 0 6px"><b>In the shops</b> <span class="muted">as found ${esc(whenWords(String(e.products.at || '').slice(0, 10) || today()))}. Check the price before you buy.</span></p>
+      <ul class="list compact ideas products">${found.map((x, n) => `<li><span class="grow"><a class="name" href="${esc(safeUrl(x.url))}" target="_blank" rel="noopener">${esc(x.title)} ${icon('external')}</a>
+        <span class="meta">${esc([x.price ? money(x.price) : '', x.shop].filter(Boolean).join(' at '))}</span>${x.why ? `<span class="meta desc">${esc(x.why)}</span>` : ''}</span>
+        <button class="btn small tonal" data-act="chooseProduct" data-id="${n}">I'll get this</button></li>`).join('')}</ul>` : ''}
+    ${busy(ask) ? `<div class="notice info"><span class="spinner"></span><span class="grow"><b>Claude is looking in the shops…</b><br>This takes a minute or two. You can leave this page; they'll be here when you're back.</span></div>`
+      : `${failed(ask) ? `<p class="small danger-text">Claude couldn't search the shops: ${esc(ask.message || 'it took too long')}. Try again.</p>` : ''}
+      <div class="row" style="margin:4px 0 14px"><button class="btn primary" data-act="findProducts">${icon('search')} ${found.length ? 'Look in the shops again' : 'Find real presents in the shops'}</button></div>`}
+    <p class="small" style="margin:0 0 6px"><b>Ideas</b></p>
+    <ul class="list compact ideas types">${ideas.map(i => `<li><span class="grow"><span class="name">${esc(i.name)}</span><span class="meta">${esc([priceText(i), i.description].filter(Boolean).join(' · '))}</span></span><button class="btn small tonal" data-act="chooseIdea" data-id="${esc(i.id)}">I'll get this</button></li>`).join('') || '<li class="muted small">No saved ideas fit. Try a bigger budget.</li>'}</ul>
+    <div class="row" style="margin:10px 0 14px"><a class="btn outline" href="#/ideas/${esc(e.id)}">${icon('gift')} More ideas</a></div>
     <form data-form="ownPresent" class="own"><label class="field">Or something else<span class="hint">Say what you'll get, so the other person knows.</span>
-      <div class="row nowrap"><input type="text" name="name" placeholder="A Lego set" required data-keep="own.name"><input type="number" name="price" placeholder="£" inputmode="decimal" style="max-width:80px" data-keep="own.price"></div></label>
+      <div class="row nowrap"><input type="text" name="name" placeholder="A Lego set" required data-keep="own.name"><input type="number" name="price" placeholder="£" inputmode="decimal" step="any" style="max-width:80px" data-keep="own.price"></div></label>
       <div class="row"><button class="btn tonal" name="how" value="chosen">I'll get this</button><button class="btn ghost" name="how" value="bought">Already bought it</button></div></form>
   </div>`;
 }
@@ -99,7 +110,7 @@ function presentCard(e, days, title) {
 document.addEventListener('toggle', ev2 => {
   const d = ev2.target;
   if (!d.dataset?.scan || !d.open || invitePics[d.dataset.scan]) return;
-  S.getScan(d.dataset.scan).then(s => { invitePics[d.dataset.scan] = s?.image || ''; render(); }).catch(() => {});
+  S.getScanImage(d.dataset.scan).then(img => { invitePics[d.dataset.scan] = img || 'none'; render(); }).catch(() => {});
 }, true);
 
 const claim = (present, done) => run(async () => {
@@ -110,6 +121,10 @@ const claim = (present, done) => run(async () => {
 actions.chooseIdea = el => {
   const i = st.ideas.find(x => x.id === el.dataset.id); if (!i) return;
   claim({ state: 'chosen', name: i.name, ideaId: i.id, price: i.price || null }, 'Noted. You\'re getting it.');
+};
+actions.chooseProduct = el => {
+  const x = ev()?.products?.items?.[Number(el.dataset.id)]; if (!x) return;
+  claim({ state: 'chosen', name: x.title, ideaId: null, price: x.price || null, url: safeUrl(x.url), shop: x.shop || '' }, 'Noted. You\'re getting it.');
 };
 actions.ownPresent = (f, e) => {
   const name = f.name.value.trim().slice(0, 120); if (!name) return;
@@ -123,7 +138,6 @@ actions.bought = f => {
 };
 actions.takeOver = () => { if (confirm('Take this over? They\'ll see that you\'re getting it now.')) claim({ state: 'chosen', takeOver: true }, 'You\'re getting it now'); };
 actions.wrapped = el => claim({ state: el.checked ? 'wrapped' : 'bought' });
-actions.card = el => run(() => S.updateH(['events', arg], { card: el.checked }));
 actions.undoPresent = () => run(async () => {
   const e = ev(); const cid = e?.present?.cupboardId;
   await S.updateH(['events', arg], { present: S.deleteField() });
@@ -137,13 +151,13 @@ actions.useCupboard = el => {
     await S.updateH(['cupboard', c.id], { usedFor: arg });
   }, 'Taken from the cupboard');
 };
-actions.askClaude = () => {
-  const e = ev();
-  run(async () => {
-    await S.addH(['asks'], { ...queryFor(e), friend: e.friend || '', eventId: e.id, state: 'requested', by: S.me(), createdAt: S.serverTimestamp() });
-    location.hash = `#/ideas/${e.id}`;
-  });
-};
+// Ask Claude to search the shops for real products for this party (functions/tasks.mjs
+// processAsk). `hint` narrows it to one kind of thing, from the Ideas screen.
+export const findProducts = (e, hint = '') => S.addH(['asks'], {
+  kind: 'products', ...queryFor(e), friend: e.friend || '', child: e.child || '', theme: e.theme || '', hint, eventId: e.id,
+  state: 'requested', by: S.me(), createdAt: S.serverTimestamp(),
+});
+actions.findProducts = () => run(() => findProducts(ev()));
 // The party's own details are the same for every birthday child of a joint party.
 const updateParty = data => S.batchH(sibs(ev()).map(x => ['update', ['events', x.id], data]));
 actions.looksRight = () => run(() => updateParty({ needsCheck: false }), 'Thanks');
@@ -158,7 +172,8 @@ actions.deleteEvent = () => {
   if (!confirm(`Delete ${partyTitle(e)}?${all.length > 1 ? ' That\'s the whole party. To take one child off it, use Change instead.' : ''} This can't be undone.`)) return;
   run(async () => {
     for (const x of all) if (x.present?.cupboardId) await S.updateH(['cupboard', x.present.cupboardId], { usedFor: null }).catch(() => {});
-    await S.batchH(all.map(x => ['delete', ['events', x.id]]));
+    const scans = [...new Set(all.map(x => x.scanId).filter(Boolean))];
+    await S.batchH([...all.map(x => ['delete', ['events', x.id]]), ...scans.flatMap(id => [['delete', ['scans', id]], ['delete', ['scanImages', id]]])]);
     location.hash = '#/home';
   }, 'Deleted');
 };

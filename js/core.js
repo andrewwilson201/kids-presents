@@ -2,12 +2,12 @@
 // tap/submit/change handlers. Each screen lives in js/views/ and registers its
 // view in `routes` and its handlers in `actions`.
 //
-// Every module imports this file (and store.js, plan.js, ui.js) with the same
+// Every module imports this file (and store.js, gifts.js, ui.js) with the same
 // ?v= query, so they all share one copy. Bump it in every import when any of
 // the app's files change, so phones don't mix old and new files.
-import * as S from './store.js?v=2';
-import { iso } from './gifts.js?v=2';
-import { icon, avatar } from './ui.js?v=2';
+import * as S from './store.js?v=3';
+import { iso } from './gifts.js?v=3';
+import { icon, avatar } from './ui.js?v=3';
 
 export const $main = document.getElementById('main');
 export const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -19,6 +19,10 @@ export const fmtLong = d => fmtDay(d, { weekday: 'long', day: 'numeric', month: 
 export const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 export const hostOf = url => { try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return url; } };
 export const toMillis = t => (t?.toMillis ? t.toMillis() : t ? new Date(t).getTime() : 0);
+// A request to Claude (a scan or an ask) that's still being worked on. One stuck
+// on 'working' for over six minutes has failed (the function timed out).
+export const busy = x => x?.state === 'requested' || (x?.state === 'working' && Date.now() - (toMillis(x.startedAt) || Date.now()) < 6 * 60e3);
+export const failed = x => x?.state === 'failed' || (x?.state === 'working' && !busy(x));
 export const head = (title, { eyebrow = '', sub = '', right = '' } = {}) => `<header class="page-head">${eyebrow ? `<span class="eyebrow">${eyebrow}</span>` : ''}
   <div class="row nowrap"><h1>${title}</h1><span class="spacer"></span>${right}</div>${sub ? `<p>${sub}</p>` : ''}</header>`;
 export const section = (title, { count = null, right = '' } = {}) => `<div class="section-head"><h2>${title}${count != null ? ` <span class="count">${count}</span>` : ''}</h2><span class="spacer"></span>${right}</div>`;
@@ -83,7 +87,7 @@ export function render() {
   tabs.hidden = !ready; settings.hidden = !ready;
   document.getElementById('sync').textContent = navigator.onLine ? '' : 'Offline';
   document.getElementById('who').innerHTML = ready ? Object.entries(st.household.memberNames || {}).map(([uid, name]) => avatar({ uid, name })).join('') : '';
-  const tab = { event: 'home', add: 'home', scan: 'home', idea: 'ideas' }[route] || route;
+  const tab = { event: 'home', edit: 'home', scan: 'home', cupboard: 'ideas' }[route] || route;
   tabs.querySelectorAll('a').forEach(a => a.classList.toggle('on', a.dataset.tab === tab));
   const focus = remember();
   if (!st.ready) { $main.innerHTML = '<div class="loading"><span class="spinner"></span></div>'; return; }

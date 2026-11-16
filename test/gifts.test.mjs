@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { siblingsOf, groupEvents, joinNames, jointDayOf, eventsFromInvite, ageOn, dueReminders, matchIdeas, scoreIdea, eventFromInvite, pastPresents, daysBetween, addDays, shopLinks, fmt12 } from '../js/gifts.js';
+import { findDuplicate, friendsFrom, birthdaysDue, turningOn, samePerson, siblingsOf, groupEvents, joinNames, jointDayOf, eventsFromInvite, ageOn, dueReminders, matchIdeas, scoreIdea, eventFromInvite, pastPresents, daysBetween, addDays, shopLinks, fmt12 } from '../js/gifts.js';
 
 const kids = [{ id: 'charlie', name: 'Charlie', gender: 'boy', age: 7, ageOn: '2026-11-16' }, { id: 'sophie', name: 'Sophie', gender: 'girl', birthday: '2021-03-04' }];
 const party = (over = {}) => ({ id: 'e1', kind: 'party', child: 'sophie', friend: 'Olivia', date: '2026-11-28', start: '14:00', ...over });
@@ -34,6 +34,7 @@ test('reminders: first, second, reply-by, on the day, each once', () => {
   assert.deepEqual(dueReminders(bought, '2026-11-25', {}, kids), []);
   const day = dueReminders(bought, '2026-11-28', {}, kids);
   assert.equal(day.length, 1); assert.equal(day[0].kind, 'dayOf'); assert.match(day[0].body, /Take Lego \(and a card\)/);
+  assert.doesNotMatch(dueReminders(party({ present: { state: 'wrapped', name: 'Lego' } }), '2026-11-28', {}, kids)[0].body, /card/);
   // Late addition: only the second reminder, not both.
   assert.deepEqual(dueReminders(party(), '2026-11-26', {}, kids).map(r => r.kind), ['second']);
   // Reply-by.
@@ -75,6 +76,53 @@ test('an invite read by Claude becomes a party for the right child', () => {
 test('what we gave a friend before', () => {
   const events = [party({ id: 'a', date: '2025-11-20', present: { state: 'bought', name: 'Slime kit', ideaId: 's' } }), party({ id: 'b', friend: 'olivia ', date: '2024-11-20', present: { state: 'wrapped', name: 'Book' } }), party({ id: 'c' })];
   assert.deepEqual(pastPresents(events, 'Olivia', 'c').map(p => p.name), ['Slime kit', 'Book']);
+});
+
+test('same-name friends of different children are kept apart', () => {
+  const events = [party({ id: 'a', friend: 'Jack', child: 'charlie', date: '2025-11-20', present: { state: 'bought', name: 'Football' } }), party({ id: 'b', friend: 'Jack', child: 'sophie', date: '2025-10-02', present: { state: 'bought', name: 'Puzzle' } })];
+  assert.deepEqual(pastPresents(events, 'Jack', null, null, 'charlie').map(p => p.name), ['Football']);
+  assert.deepEqual(pastPresents(events, 'Jack', null, null, 'both').map(p => p.name), ['Football', 'Puzzle']);
+  assert.equal(friendsFrom(events, '2026-11-16').length, 2);
+  assert.equal(samePerson({ friend: 'jack ', child: '' }, events[0]), true);
+});
+
+test('the same party isn\'t added twice', () => {
+  const events = [party({ id: 'a' }), party({ id: 'b', friend: 'Max' })];
+  assert.equal(findDuplicate(events, { friend: 'olivia', date: '2026-11-28', child: '' }).id, 'a');
+  assert.equal(findDuplicate(events, { friend: 'Olivia', date: '2026-11-29', child: 'sophie' }), null);
+  assert.equal(findDuplicate(events, { friend: 'Olivia', date: '2026-11-28', child: 'charlie' }), null);
+  assert.equal(findDuplicate(events, { id: 'a', friend: 'Olivia', date: '2026-11-28', child: 'sophie' }), null);
+});
+
+test('friends are remembered from year to year', () => {
+  const events = [
+    party({ id: 'o24', date: '2024-11-30', friendAge: 5, interests: 'unicorns', friendGender: 'girl', present: { state: 'wrapped', name: 'Book' } }),
+    party({ id: 'o25', date: '2025-11-29', interests: 'unicorns, crafts', present: { state: 'bought', name: 'Slime kit' } }),
+    party({ id: 'm25', friend: 'Max', child: 'charlie', date: '2025-06-10', friendAge: 6 }),
+    party({ id: 'i26', friend: 'Isla', date: '2026-12-01', friendAge: 5 }),
+    party({ id: 'i25', friend: 'Isla', date: '2025-12-02', friendAge: 4 }),
+  ];
+  const fs = friendsFrom(events, '2026-11-16');
+  const o = fs.find(f => f.name === 'Olivia');
+  assert.deepEqual([o.child, o.gender, o.interests, o.last.id, o.upcoming], ['sophie', 'girl', 'unicorns, crafts', 'o25', null]);
+  assert.deepEqual(o.presents.map(p => p.name), ['Slime kit', 'Book']);
+  assert.equal(turningOn(o, '2026-11-28'), 7);
+  assert.equal(fs.find(f => f.name === 'Isla').upcoming.id, 'i26');
+  // Olivia's birthday is about now and nothing's in the calendar; Max's was months ago; Isla already has a party.
+  const due = birthdaysDue(fs, '2026-11-16');
+  assert.deepEqual(due.map(d => [d.friend.name, d.day, d.age, d.likeId]), [['Olivia', '2026-11-29', 7, 'o25']]);
+  assert.deepEqual(birthdaysDue(fs, '2026-11-16', { [o.key]: 2026 }), []);
+  assert.equal(birthdaysDue(fs, '2026-12-05')[0].friend.name, 'Olivia'); // up to two weeks after
+  assert.deepEqual(birthdaysDue(fs, '2026-12-20'), []);
+  // Over the new year.
+  const jan = friendsFrom([party({ id: 'j', friend: 'Jo', date: '2026-01-10' })], '2026-12-20');
+  assert.equal(birthdaysDue(jan, '2026-12-20')[0].day, '2027-01-10');
+});
+
+test('ideas are mixed by kind when nothing narrows them', () => {
+  const ideas = JSON.parse(readFileSync(new URL('../data/ideas.json', import.meta.url)));
+  const top = matchIdeas(ideas, { budget: 15, age: 6 }, { limit: 8 });
+  assert.ok(new Set(top.map(i => i.category)).size >= 4, 'at least four kinds in the first eight');
 });
 
 test('joint parties: one event per birthday child, shown as one party', () => {

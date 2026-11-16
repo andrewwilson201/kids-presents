@@ -1,9 +1,9 @@
 // Settings: the family (who's in, the children), budget, reminders,
-// notifications, the calendar feed, and data.
-import * as S from '../store.js?v=2';
-import { ageOn, isDay, DEFAULT_REMINDERS } from '../gifts.js?v=2';
-import { icon, avatar, childBadge } from '../ui.js?v=2';
-import { st, esc, head, section, run, render, toast, today, plural, routes, actions } from '../core.js?v=2';
+// notifications and the calendar feed.
+import * as S from '../store.js?v=3';
+import { ageOn, isDay, DEFAULT_REMINDERS } from '../gifts.js?v=3';
+import { icon, avatar, childBadge } from '../ui.js?v=3';
+import { st, esc, head, section, run, render, toast, today, routes, actions } from '../core.js?v=3';
 
 routes.settings = () => {
   const h = st.household;
@@ -53,14 +53,6 @@ routes.settings = () => {
       <input type="text" readonly value="${esc(feed)}" onclick="this.select()">
       <div class="row" style="margin-top:10px"><button class="btn small tonal" data-act="copy" data-id="${esc(feed)}">${icon('link')} Copy link</button><a class="btn small ghost" href="${esc(feed.replace(/^https?:/, 'webcal:'))}">Open in calendar app</a></div></div>
 
-    ${section('Ideas')}
-    <div class="card"><b>Starter ideas</b><p class="small muted" style="margin:2px 0 10px">${plural(st.ideas.filter(i => i.source === 'starter').length, 'starter idea')} came with the app. Load the list again to bring back any you deleted or get new ones after an update. Your likes and hidden ones are kept.</p>
-      <button class="btn small outline" data-act="reloadStarter">${icon('repeat')} Load starter ideas</button></div>
-
-    ${section('Data')}
-    <div class="card"><b>Download your data</b><p class="small muted" style="margin:2px 0 10px">Every party, idea and cupboard present as one file.</p>
-      <button class="btn outline" data-act="exportData">${icon('download')} Download</button></div>
-
     ${section('Account')}
     <div class="card"><div class="row nowrap"><span class="grow small"><span class="muted">Signed in as</span><br><b>${esc(st.user.email)}</b></span><button class="btn outline" data-act="signOut">${icon('logout')} Sign out</button></div></div>`;
 };
@@ -95,16 +87,3 @@ actions.share = el => {
 actions.copy = el => navigator.clipboard?.writeText(el.dataset.id).then(() => toast('Copied'), () => toast('Couldn\'t copy. Select the link and copy it.'));
 actions.newInvite = () => run(S.newInviteCode, 'New link made');
 actions.signOut = () => run(S.signOut);
-actions.reloadStarter = () => run(async () => {
-  const starter = await fetch('data/ideas.json', { cache: 'no-cache' }).then(r => r.json());
-  const have = new Map(st.ideas.map(i => [i.id, i]));
-  // Keep what you've done to them (liked, hidden, given).
-  await S.batchH(starter.map(i => { const old = have.get(i.id) || {}; return ['set', ['ideas', i.id], { ...i, source: 'starter', liked: old.liked || false, hidden: old.hidden || false, given: old.given || 0 }]; }));
-}, 'Starter ideas loaded');
-actions.exportData = () => run(async () => {
-  const data = await S.exportAll();
-  const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
-  const a = Object.assign(document.createElement('a'), { href: url, download: `party-presents-${today()}.json` });
-  document.body.append(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 10e3);
-}, 'Downloaded');

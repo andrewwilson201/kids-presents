@@ -1,8 +1,8 @@
 // How parties and birthdays look in lists: shared by the Parties, Calendar,
-// Ideas and Cupboard screens.
-import { daysBetween, fmt12, presentSorted, needsPresent, isDay, siblingsOf, groupEvents, joinNames } from './gifts.js?v=2';
-import { icon, childBadge } from './ui.js?v=2';
-import { st, esc, fmtDay, today, money } from './core.js?v=2';
+// Ideas, Cupboard and Friends screens.
+import { daysBetween, fmt12, presentSorted, needsPresent, isDay, siblingsOf, groupEvents, joinNames, friendsFrom } from './gifts.js?v=3';
+import { icon, childBadge } from './ui.js?v=3';
+import { st, esc, fmtDay, today, money } from './core.js?v=3';
 
 export const children = () => st.household?.children || [];
 const ordinal = n => `${n}${(n % 100 >= 11 && n % 100 <= 13) ? 'th' : ({ 1: 'st', 2: 'nd', 3: 'rd' }[n % 10] || 'th')}`;
@@ -44,7 +44,7 @@ export function presentChip(e) {
   if (e.noPresent) return '<span class="chip">No present needed</span>';
   const by = p.by?.name ? esc(firstName(p.by.name)) : '';
   const mine = p.by?.uid === st.user?.uid;
-  if (p.state === 'wrapped') return `<span class="chip ok">${icon('check')} Wrapped${e.card ? ' with card' : ''}</span>`;
+  if (p.state === 'wrapped') return `<span class="chip ok">${icon('check')} Wrapped</span>`;
   if (p.state === 'bought') return `<span class="chip ok">${icon('gift')} Bought${by ? ` by ${mine ? 'you' : by}` : ''}</span>`;
   if (p.state === 'chosen') return `<span class="chip new">${icon('bag')} ${mine ? 'You\'re' : `${by} is`} getting it</span>`;
   const d = isDay(e.date) ? daysBetween(today(), e.date) : 99;
@@ -72,5 +72,7 @@ export const past = () => st.events.filter(e => isDay(e.date) && e.date < today(
 export const undated = () => st.events.filter(e => !isDay(e.date));
 // Parties that still need someone to get a present.
 export const needing = () => upcoming().filter(e => needsPresent(e) && !presentSorted(e));
+// Everyone whose party has been in the calendar (js/gifts.js friendsFrom).
+export const friends = () => friendsFrom(st.events, today());
 export const budgetOf = e => Number(e?.budget || st.household?.budget || 15);
 export const priceText = i => (i.price ? `about ${money(i.price)}` : '');

@@ -1,7 +1,7 @@
 // Firebase functions for Party Presents. They run in London (europe-west2),
 // next to the database.
-//   readInvite      an invite picture is saved -> Claude reads it -> the party is added
-//   suggestIdeas    "Ask Claude for ideas" -> ideas saved to the household's ideas
+//   readInvite      an invite (picture or message) is saved -> Claude reads it -> the party is added
+//   suggestIdeas    "Ask Claude": ideas saved to the household's ideas, or real products found in the shops for a party
 //   dailyReminders  8am every day: phone notifications for presents still needed
 //   calendar        the calendar feed (served at /calendar.ics by Firebase Hosting)
 //   newHousehold    the first household made: lock sign-up (access.mjs)
@@ -46,7 +46,8 @@ const guarded = fn => async event => {
 };
 
 export const readInvite = onDocumentWritten({ ...opts, document: 'households/{hid}/scans/{sid}' }, guarded((h, ref) => processScan(h, ref)));
-export const suggestIdeas = onDocumentWritten({ ...opts, document: 'households/{hid}/asks/{aid}' }, guarded((h, ref) => processAsk(h, ref)));
+// Searching the shops for real products takes a minute or two, so this one gets longer.
+export const suggestIdeas = onDocumentWritten({ ...opts, timeoutSeconds: 300, document: 'households/{hid}/asks/{aid}' }, guarded((h, ref) => processAsk(h, ref)));
 
 export const dailyReminders = onSchedule({ region, schedule: '0 8 * * *', timeZone: 'Europe/London', maxInstances: 1 }, async () => {
   console.log(`Sent ${await sendReminders(db)} reminders`);

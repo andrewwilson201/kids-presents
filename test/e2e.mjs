@@ -80,6 +80,7 @@ await a.fill('input[name=date]', addDays(today, 12));
 await a.fill('input[name=start]', '14:00');
 await a.fill('input[name=end]', '16:00');
 await a.fill('input[name=venue]', 'Jump Zone');
+await a.click('summary:has-text("More details")');
 await a.fill('input[name=rsvpBy]', addDays(today, 5));
 await shot(a, '03-add-party');
 await a.click('button:has-text("Add party")');
@@ -101,7 +102,7 @@ await a.waitForSelector('text=Sarah is getting this');
 await shot(a, '06-andrew-sees-sarah');
 const ev = (await H.collection('events').get()).docs[0];
 const clash = await a.evaluate(async id => {
-  const S = await import('/js/store.js?v=2');
+  const S = await import('/js/store.js?v=3');
   try { await S.claimPresent(id, { state: 'chosen', name: 'Something else' }); return 'claimed'; } catch (e) { return e.code; }
 }, ev.id);
 assert.equal(clash, 'claimed', 'a second claim is refused');
@@ -128,18 +129,34 @@ const scan = (await H.collection('scans').get()).docs[0];
 assert.equal(scan.data().state, 'requested');
 const newId = await processScan(await H.get(), scan.ref);
 assert.ok(newId, 'scan made a party');
-await a.waitForSelector('text=Read from an invite picture');
+await a.waitForSelector('text=Read from an invite');
+assert.ok((await H.collection('scanImages').doc(scan.id).get()).data().image.startsWith('data:image/jpeg'), 'the picture is kept apart from the scan');
+assert.equal(scan.data().image, undefined);
 await shot(a, '09-from-invite');
 await a.click('button:has-text("Looks right")');
 
-// 8. Ask Claude for ideas from that party.
+// 8. Real products from the shops for that party, then more ideas from Claude.
+step('Claude finds real products in the shops');
+await a.click('button:has-text("Find real presents in the shops")');
+await a.waitForSelector('text=Claude is looking in the shops');
+const asks = async kind => (await H.collection('asks').get()).docs.filter(d => d.data().kind === kind);
+await processAsk(await H.get(), (await asks('products'))[0].ref);
+await a.waitForSelector('text=Fake craft set from the shops');
+assert.equal(await a.locator('.products li').count(), 2, 'the product without an https link is dropped');
+await shot(a, '10-products');
+await a.click('.products button:has-text("I\'ll get this") >> nth=0');
+await a.waitForSelector('a:has-text("Open at Argos")');
+assert.equal((await H.collection('events').doc(newId).get()).data().present.url, 'https://www.argos.co.uk/product/1234567');
+await shot(a, '10b-product-chosen');
+await a.click('button:has-text("Change my mind")');
+await a.waitForSelector('text=Nobody\'s getting one yet');
 step('Ask Claude for ideas');
+await a.click('a:has-text("More ideas")');
 await a.click('button:has-text("Ask Claude for ideas")');
 await a.waitForSelector('text=Claude is thinking');
-const ask = (await H.collection('asks').get()).docs[0];
-await processAsk(await H.get(), ask.ref);
+await processAsk(await H.get(), (await asks('ideas'))[0].ref);
 await a.waitForSelector('text=Fake new idea from Claude');
-await shot(a, '10-claude-ideas');
+await shot(a, '10c-claude-ideas');
 
 // 9. Cupboard: add a present and use it for the invite's party.
 step('Cupboard');
@@ -197,6 +214,39 @@ await a.click('button:has-text("Save")');
 await a.waitForSelector('h1:has-text("Mia\'s 6th birthday party")');
 assert.equal((await H.collection('events').where('venue', '==', 'Village hall').get()).size, 1);
 
+// 9c. The same invite again, this time as a message: it isn't added twice.
+step('The same invite as a message is spotted as a duplicate');
+const before = (await H.collection('events').count().get()).data().count;
+await b.goto(`${SITE}?emulator#/scan`);
+await b.fill('textarea[name=text]', 'Hi all! Olivia is turning 7. Party at Jump Zone, 2 to 4pm. RSVP to Sarah.');
+await shot(b, '11e-paste-message');
+await b.click('button:has-text("Read the message")');
+await b.waitForSelector('text=Reading the invite');
+const textScan = (await H.collection('scans').get()).docs.find(d => d.data().text);
+assert.equal(await processScan(await H.get(), textScan.ref), newId, 'points at the party that\'s already there');
+assert.equal((await textScan.ref.get()).data().duplicate, true);
+await b.waitForSelector('h1:has-text("Olivia\'s 7th birthday party")');
+assert.equal((await H.collection('events').count().get()).data().count, before, 'no second party');
+
+// 9d. Friends, and a birthday coming round again.
+step('Friends remembered, and a birthday coming round again');
+await H.collection('events').add({ kind: 'party', child: 'charlie', friend: 'Tom', friendAge: 6, friendGender: 'boy', interests: 'football, Pokemon', date: addDays(today, -360), venue: 'Leisure centre', present: { state: 'bought', name: 'Pokemon cards', by: { uid: 'x', name: 'Andrew' } } });
+await a.goto(`${SITE}?emulator#/home`);
+await a.waitForSelector('text=Tom turns 7 around');
+await shot(a, '11f-birthday-nudge');
+await a.click('a:has-text("Add it")');
+await a.waitForSelector('text=Add a party');
+assert.deepEqual([await a.inputValue('input[name=friend]'), await a.inputValue('input[name=friendAge]'), await a.inputValue('input[name=interests]'), await a.inputValue('select[name=child]')], ['Tom', '7', 'football, Pokemon', 'charlie']);
+await shot(a, '11g-add-from-last-year');
+await a.goto(`${SITE}?emulator#/friends`);
+await a.waitForSelector('.friend:has-text("Tom")');
+await a.click('.friend:has-text("Tom") summary');
+await a.waitForSelector('text=Gave Pokemon cards');
+await shot(a, '11h-friends');
+await a.goto(`${SITE}?emulator#/home`);
+await a.click('button:has-text("Not this year")');
+await a.waitForSelector('text=Tom turns 7 around', { state: 'detached' });
+
 // 10. Calendar and home.
 step('Calendar, home, settings');
 await a.goto(`${SITE}?emulator#/calendar`);
@@ -214,8 +264,15 @@ await shot(a, '15-ideas');
 
 // 11. Reminders and the calendar feed, from the functions' side.
 step('Reminders and calendar feed');
-const sent = await sendReminders(db, new Date(`${addDays(today, 4)}T08:00:00Z`));
-console.log(`  reminders that would be sent 4 days on: ${sent}`);
+// With no phone signed up for notifications nothing counts as sent, so it's tried again the next day.
+const soon = new Date(`${addDays(today, 4)}T08:00:00Z`);
+assert.equal(await sendReminders(db, soon), 0);
+assert.ok((await H.collection('events').get()).docs.every(d => !d.data().reminded), 'nothing marked as reminded yet');
+await H.collection('devices').doc('phone').set({ token: 't', uid: 'x' });
+const sent = await sendReminders(db, soon);
+assert.ok(sent > 0, 'reminders go once a phone is signed up');
+assert.equal(await sendReminders(db, soon), 0, 'and only once');
+console.log(`  reminders sent 4 days on: ${sent}`);
 const events = (await H.collection('events').get()).docs.map(d => ({ id: d.id, ...d.data() }));
 const ics = buildCalendar((await H.get()).data(), events);
 writeFileSync(new URL('calendar.ics', shots), ics);
