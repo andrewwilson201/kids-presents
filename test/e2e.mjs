@@ -65,8 +65,19 @@ await b.fill('input[name=name]', 'Sarah Wilson');
 await b.fill('input[name=email]', `sarah${Date.now()}@example.com`);
 await b.click('text=Test sign in');
 await b.waitForSelector('text=Join a household');
+await b.waitForSelector('text=Join “The Wilsons”?');
+await shot(b, '02b-join');
 await b.click('button:has-text("Join")');
 await b.waitForSelector('text=No parties yet');
+
+// 2b. A link that's no longer good says so, rather than waiting for ever.
+const c = await (await browser.newContext(phone)).newPage();
+await c.goto(`${SITE}?emulator&join=nosuchcode12`);
+await c.fill('input[name=name]', 'Someone Else');
+await c.fill('input[name=email]', `else${Date.now()}@example.com`);
+await c.click('text=Test sign in');
+await c.waitForSelector('text=This invite link has expired');
+await c.close();
 
 // 3. Andrew adds a party by hand for Sophie.
 step('Andrew adds a party by hand');
@@ -102,7 +113,7 @@ await a.waitForSelector('text=Sarah is getting this');
 await shot(a, '06-andrew-sees-sarah');
 const ev = (await H.collection('events').get()).docs[0];
 const clash = await a.evaluate(async id => {
-  const S = await import('/js/store.js?v=4');
+  const S = await import('/js/store.js?v=5');
   try { await S.claimPresent(id, { state: 'chosen', name: 'Something else' }); return 'claimed'; } catch (e) { return e.code; }
 }, ev.id);
 assert.equal(clash, 'claimed', 'a second claim is refused');
