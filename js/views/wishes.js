@@ -6,12 +6,12 @@
 // households/{hid}/wishes/{id}: { child, occasion: christmas|birthday, name, price, url, shop, image, notes,
 //   rank (lower is higher up), autoName (name still the placeholder), pending (a link being read),
 //   ordered {uid, name, at} | null, by {uid, name}, createdAt }
-import * as S from '../store.js?v=7';
-import { daysBetween, isDay } from '../gifts.js?v=7';
-import { icon, thumb } from '../ui.js?v=7';
-import { st, esc, head, run, toast, money, today, fmtDay, routes, actions, arg, route, hooks, render, busy, failed, keep, hostOf, empty, plural, hold, toMillis, section } from '../core.js?v=7';
-import { children, firstName } from '../events.js?v=7';
-import { startTextScan } from './scan.js?v=7';
+import * as S from '../store.js?v=8';
+import { daysBetween, isDay, iso } from '../gifts.js?v=8';
+import { icon, thumb } from '../ui.js?v=8';
+import { st, esc, head, run, toast, money, today, fmtDay, routes, actions, arg, route, hooks, render, busy, failed, keep, hostOf, empty, plural, hold, toMillis, section } from '../core.js?v=8';
+import { children, firstName } from '../events.js?v=8';
+import { startTextScan } from './scan.js?v=8';
 
 const OCCASIONS = { christmas: 'Christmas', birthday: 'Birthday' };
 const safeUrl = u => (/^https:\/\/[^\s"'<>]+$/.test(u || '') ? u : '');
@@ -29,6 +29,13 @@ export function nextBirthday(kid, day) {
   const on = y => (md === '02-29' && new Date(Date.UTC(y, 1, 29)).getUTCMonth() !== 1 ? `${y}-02-28` : `${y}-${md}`);
   const y = Number(day.slice(0, 4));
   return on(y) >= day ? on(y) : on(y + 1);
+}
+// The last time the day came round, before today (or null with no birthday set).
+export function lastDay(kid, occ, day) {
+  const next = occ === 'christmas' ? nextChristmas(day) : nextBirthday(kid, day);
+  if (!next) return null;
+  const y = Number(next.slice(0, 4)) - 1;
+  return occ === 'christmas' ? `${y}-12-25` : nextBirthday(kid, `${y}-01-01`);
 }
 const dayOf = (kid, occ) => (occ === 'christmas' ? nextChristmas(today()) : nextBirthday(kid, today()));
 function countdown(kid, occ) {
@@ -78,6 +85,7 @@ routes.wishes = () => {
   const noBirthday = occ === 'birthday' && !isDay(kid.birthday);
   return `${head(esc(listName(kid, occ)), { eyebrow: countdown(kid, occ) || 'Wish lists', sub })}
     ${sharedOffer()}
+    ${afterTheDay(cur)}
     ${kids.length > 1 ? `<div class="seg wish-kids">${kids.map(c => `<a class="${c.id === kid.id ? 'on' : ''}" href="#/wishes/${esc(c.id)}-${occ}">${esc(firstName(c.name))}${counter(c.id, occ)}</a>`).join('')}</div>` : ''}
     <div class="seg wish-occ">${Object.entries(OCCASIONS).map(([k, label]) => `<a class="${k === occ ? 'on' : ''}" href="#/wishes/${esc(kid.id)}-${k}">${icon(k === 'christmas' ? 'star' : 'cake')} ${label}${counter(kid.id, k)}</a>`).join('')}</div>
     ${noBirthday ? `<p class="small muted" style="margin:8px 4px 0">Add ${esc(firstName(kid.name))}'s birthday in <a href="#/settings">Settings</a> to see a countdown here.</p>` : ''}
@@ -135,6 +143,44 @@ function editForm(w, cur) {
       <span class="spacer"></span><button type="button" class="btn small ghost danger" data-act="delWish" data-id="${esc(w.id)}">${icon('trash')} Delete</button></div>
   </form>`;
 }
+
+// ---------- after the day ----------
+// Once the birthday or Christmas has been, the list asks what to do with the
+// ideas from before it that weren't ordered: move them to the other list, keep
+// them for next time, or clear them. The ordered ones are cleared either way.
+// The household remembers which day each list was tidied after (wishTidied).
+const otherOcc = occ => (occ === 'christmas' ? 'birthday' : 'christmas');
+function leftovers(cur) {
+  const day = lastDay(cur.kid, cur.occ, today());
+  if (!day || (st.household.wishTidied || {})[listKey(cur)] >= day) return null;
+  const old = itemsOf(cur.kid.id, cur.occ).filter(w => toMillis(w.createdAt) && iso(toMillis(w.createdAt)) <= day);
+  if (!old.length) return null;
+  return { day, open: sortOpen(old), done: old.filter(w => w.ordered) };
+}
+function afterTheDay(cur) {
+  const l = leftovers(cur);
+  if (!l) return '';
+  const what = cur.occ === 'christmas' ? 'Christmas' : `${esc(firstName(cur.kid.name))}'s birthday`;
+  const cleared = l.done.length ? ` The ${plural(l.done.length, 'ordered present')} will come off the list.` : '';
+  if (!l.open.length) return `<div class="notice info after-day">${icon('gift')}<span class="grow"><b>${what} has been.</b> Everything on the list was ordered.${cleared}
+    <span class="row" style="margin-top:10px"><button class="btn small tonal" data-act="tidyWishes" data-id="clear">Clear the list for next time</button></span></span></div>`;
+  return `<div class="notice info after-day">${icon('gift')}<span class="grow"><b>${what} has been.</b> ${plural(l.open.length, 'idea')} ${l.open.length === 1 ? 'wasn\'t' : 'weren\'t'} ordered. What should happen to ${l.open.length === 1 ? 'it' : 'them'}?${cleared}
+    <span class="row" style="margin-top:10px"><button class="btn small primary" data-act="tidyWishes" data-id="move">Move to ${esc(listName(cur.kid, otherOcc(cur.occ)))}</button>
+    <button class="btn small tonal" data-act="tidyWishes" data-id="keep">Keep for next ${cur.occ === 'christmas' ? 'Christmas' : 'birthday'}</button>
+    <button class="btn small ghost" data-act="tidyWishes" data-id="clear">Clear ${l.open.length === 1 ? 'it' : 'them'}</button></span></span></div>`;
+}
+actions.tidyWishes = el => {
+  const cur = current(); const l = leftovers(cur); if (!l) return;
+  const how = el.dataset.id, to = otherOcc(cur.occ);
+  const top = Math.max(-1, ...sortOpen(itemsOf(cur.kid.id, to)).map(rank));
+  const ops = [
+    ...l.done.map(w => ['delete', ['wishes', w.id]]),
+    ...(how === 'clear' ? l.open.map(w => ['delete', ['wishes', w.id]]) : []),
+    ...(how === 'move' ? l.open.map((w, n) => ['update', ['wishes', w.id], { occasion: to, rank: top + 1 + n }]) : []),
+    ['update', [], { [`wishTidied.${listKey(cur)}`]: l.day }],
+  ];
+  run(() => S.batchH(ops), how === 'move' ? `Moved to ${listName(cur.kid, to)}` : how === 'keep' ? 'Kept for next time' : 'Cleared');
+};
 
 // ---------- adding ----------
 // A pasted link is saved straight away and read in the background (an ask of

@@ -1,9 +1,9 @@
 // Settings: the family (who's in, the children), budget, reminders,
 // notifications and the calendar feed.
-import * as S from '../store.js?v=7';
-import { ageOn, isDay, DEFAULT_REMINDERS } from '../gifts.js?v=7';
-import { icon, avatar, childBadge } from '../ui.js?v=7';
-import { st, esc, head, section, run, render, toast, today, routes, actions } from '../core.js?v=7';
+import * as S from '../store.js?v=8';
+import { ageOn, isDay, DEFAULT_REMINDERS } from '../gifts.js?v=8';
+import { icon, avatar, childBadge } from '../ui.js?v=8';
+import { st, esc, head, section, run, render, toast, today, routes, actions } from '../core.js?v=8';
 
 routes.settings = () => {
   const h = st.household;

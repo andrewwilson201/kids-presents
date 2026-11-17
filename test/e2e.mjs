@@ -113,7 +113,7 @@ await a.waitForSelector('text=Sarah is getting this');
 await shot(a, '06-andrew-sees-sarah');
 const ev = (await H.collection('events').get()).docs[0];
 const clash = await a.evaluate(async id => {
-  const S = await import('/js/store.js?v=7');
+  const S = await import('/js/store.js?v=8');
   try { await S.claimPresent(id, { state: 'chosen', name: 'Something else' }); return 'claimed'; } catch (e) { return e.code; }
 }, ev.id);
 assert.equal(clash, 'claimed', 'a second claim is refused');
@@ -333,7 +333,7 @@ await shot(a, '11k-wishes-ordered');
 await a.goto(`${SITE}?emulator#/wishes/charlie-birthday`);
 await a.waitForSelector('.wish:has-text("Millennium Falcon") >> text=£79.99');
 // A link shared from a shop's app offers the lists.
-await a.evaluate(async () => (await import('/js/views/wishes.js?v=7')).offerSharedLink('LEGO Friends Heartlake Cafe https://amzn.eu/d/abc123'));
+await a.evaluate(async () => (await import('/js/views/wishes.js?v=8')).offerSharedLink('LEGO Friends Heartlake Cafe https://amzn.eu/d/abc123'));
 await a.waitForSelector('text=Add this to a wish list?');
 await shot(a, '11l-shared-link');
 await a.click('button:has-text("Sophie\'s Christmas list")');
@@ -342,6 +342,26 @@ await a.waitForSelector('.wish:has-text("LEGO Friends Heartlake Cafe")');
 const wishes = (await H.collection('wishes').get()).docs.map(d => d.data());
 assert.equal(wishes.length, 4);
 assert.equal(wishes.find(w => w.name === 'Nerf blaster').ordered.name, 'Sarah');
+// After Christmas: the leftovers from before it are offered a move to the birthday list.
+step('Wish lists after the day: leftovers move to the birthday list');
+const yr = Number(today.slice(0, 4)); const xmas = today > `${yr}-12-25` ? `${yr}-12-25` : `${yr - 1}-12-25`;
+const xmasBefore = new Date(`${addDays(xmas, -10)}T12:00:00Z`);
+for (const [name, ordered] of [['Scooter', null], ['Roller skates', null], ['Board game', { uid: 'x', name: 'Andrew', at: xmasBefore.toISOString() }]])
+  await H.collection('wishes').add({ child: 'sophie', occasion: 'christmas', name, rank: 0, ordered, by: { uid: 'x', name: 'Andrew' }, createdAt: xmasBefore });
+await a.goto(`${SITE}?emulator#/wishes/sophie-christmas`);
+await a.waitForSelector('text=Christmas has been.');
+await a.waitForSelector('text=2 ideas weren\'t ordered');
+await shot(a, '11m-after-christmas');
+await a.click('button:has-text("Move to Sophie\'s birthday list")');
+await a.waitForSelector('text=Christmas has been.', { state: 'detached' });
+await a.waitForSelector('.wish:has-text("LEGO Friends Heartlake Cafe")');
+assert.equal(await a.locator('.wish:has-text("Scooter")').count(), 0);
+await a.goto(`${SITE}?emulator#/wishes/sophie-birthday`);
+await a.waitForSelector('.wish:has-text("Scooter")');
+await a.waitForSelector('.wish:has-text("Roller skates")');
+const after = (await H.collection('wishes').get()).docs.map(d => d.data());
+assert.ok(!after.some(w => w.name === 'Board game'), 'the ordered one is cleared');
+assert.equal((await H.get()).data().wishTidied['sophie-christmas'], xmas);
 
 // 10. Calendar and home.
 step('Calendar, home, settings');
