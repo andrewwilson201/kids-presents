@@ -189,3 +189,20 @@ test('calendar feed', async () => {
   assert.equal(ics.match(/BEGIN:VEVENT/g).length, 3);
   assert.ok(ics.split('\r\n').every(l => l.length <= 75));
 });
+
+test('Google Calendar invites: what Google gets', async () => {
+  const { googleEvent, eventId } = await import('../functions/gcal.mjs');
+  const hd = { name: 'The Wilsons', children: kids };
+  const g = googleEvent(hd, [party({ venue: 'Jump Zone', address: 'Mill Lane', end: '16:30' })], ['tessa@example.com'], '2026-11-17');
+  assert.equal(g.summary, "Sophie: Olivia's party");
+  assert.deepEqual(g.start, { dateTime: '2026-11-28T14:00:00', timeZone: 'Europe/London' });
+  assert.deepEqual(g.end, { dateTime: '2026-11-28T16:30:00', timeZone: 'Europe/London' });
+  assert.equal(g.location, 'Jump Zone, Mill Lane');
+  assert.deepEqual(g.attendees, [{ email: 'tessa@example.com' }]);
+  assert.match(g.description, /#\/event\/e1/);
+  // No time yet: all day.
+  assert.deepEqual(googleEvent(hd, [party({ start: '' })], [], '2026-11-17').end, { date: '2026-11-29' });
+  // Not in the calendar: past, cancelled, not going, a birthday without a party.
+  for (const over of [{ date: '2026-11-01' }, { cancelled: true }, { rsvp: 'no' }, { kind: 'birthday' }, { date: '' }]) assert.equal(googleEvent(hd, [party(over)], [], '2026-11-17'), null);
+  assert.match(eventId('h1', 'e1'), /^[a-v0-9]{5,1024}$/);
+});

@@ -6,12 +6,12 @@
 // households/{hid}/wishes/{id}: { child, occasion: christmas|birthday, name, price, url, shop, image, notes,
 //   rank (lower is higher up), autoName (name still the placeholder), pending (a link being read),
 //   ordered {uid, name, at} | null, by {uid, name}, createdAt }
-import * as S from '../store.js?v=8';
-import { daysBetween, isDay, iso } from '../gifts.js?v=8';
-import { icon, thumb } from '../ui.js?v=8';
-import { st, esc, head, run, toast, money, today, fmtDay, routes, actions, arg, route, hooks, render, busy, failed, keep, hostOf, empty, plural, hold, toMillis, section } from '../core.js?v=8';
-import { children, firstName } from '../events.js?v=8';
-import { startTextScan } from './scan.js?v=8';
+import * as S from '../store.js?v=10';
+import { daysBetween, isDay, iso } from '../gifts.js?v=10';
+import { icon, thumb } from '../ui.js?v=10';
+import { st, esc, head, run, toast, money, today, fmtDay, routes, actions, arg, route, hooks, render, busy, failed, keep, hostOf, empty, plural, hold, toMillis, section } from '../core.js?v=10';
+import { children, firstName } from '../events.js?v=10';
+import { startTextScan } from './scan.js?v=10';
 
 const OCCASIONS = { christmas: 'Christmas', birthday: 'Birthday' };
 const safeUrl = u => (/^https:\/\/[^\s"'<>]+$/.test(u || '') ? u : '');

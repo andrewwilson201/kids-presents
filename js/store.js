@@ -5,7 +5,8 @@
 //   presentUsers/{uid}                 { householdId, name }
 //   invites/{code}                     { hid, name }
 //   households/{hid}                   { name, members[], memberNames{uid:name}, inviteCode, children[{id,name,gender,birthday?,age?,ageOn?}],
-//                                        budget, reminders{first,second,dayOf}, feedKey, friendSnooze{key:year}, createdAt }
+//                                        budget, reminders{first,second,dayOf}, feedKey, friendSnooze{key:year}, createdAt,
+//                                        calendar{email, name, uid, at, problem} Google Calendar invites, written by functions/gcal.mjs }
 //   households/{hid}/events/{id}       a party or a birthday: { kind, child, friend, friendAge, friendGender, interests, date, start, end,
 //                                        venue, address, rsvpBy, rsvp, contact, theme, notes, budget, card, cancelled, needsCheck, scanId,
 //                                        present{state: chosen|bought|wrapped, name, ideaId, price, where, url, shop, image, cupboardId, by{uid,name}, at}, reminded{},
@@ -25,7 +26,7 @@ import {
   doc, getDoc, setDoc, updateDoc, addDoc, deleteDoc, collection, query, orderBy, limit, onSnapshot, serverTimestamp, runTransaction,
   arrayUnion, deleteField, writeBatch, connectFirestoreEmulator, getMessaging, getToken, deleteToken, messagingSupported,
 } from '../vendor/firebase.js';
-import { FIREBASE_CONFIG, VAPID_KEY } from './config.js';
+import { FIREBASE_CONFIG, VAPID_KEY, GOOGLE_CLIENT_ID } from './config.js';
 
 export const emulator = new URLSearchParams(location.search).has('emulator') || !FIREBASE_CONFIG.apiKey;
 const app = initializeApp(FIREBASE_CONFIG.apiKey ? FIREBASE_CONFIG : { apiKey: 'demo', projectId: 'demo-presents', authDomain: 'localhost', appId: 'demo' });
@@ -139,6 +140,43 @@ export async function newInviteCode() {
   if (old) await deleteDoc(doc(db, 'invites', old)).catch(() => {});
   return code;
 }
+
+// ---------- Google Calendar invites (functions/gcal.mjs) ----------
+export const calendarReady = Boolean(GOOGLE_CLIENT_ID) && !emulator;
+const CAL_SCOPE = 'openid email https://www.googleapis.com/auth/calendar.events';
+const calRedirect = () => `${location.origin}/`;
+async function callFunction(name, data) {
+  const token = await auth.currentUser.getIdToken();
+  const r = await fetch(`https://europe-west2-${FIREBASE_CONFIG.projectId}.cloudfunctions.net/${name}`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ data }) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok || j.error) throw new Error(j.error?.message || 'Something went wrong. Try again.');
+  return j.result;
+}
+// "Connect Google Calendar": off to Google's own page (a pop-up doesn't work in
+// the installed app on Android), which comes back to the app with a code.
+export function connectCalendar() {
+  const state = randomCode(16);
+  try { localStorage.setItem('calendarState', state); } catch { /* checked on return */ }
+  const q = new URLSearchParams({ client_id: GOOGLE_CLIENT_ID, redirect_uri: calRedirect(), response_type: 'code', scope: CAL_SCOPE, access_type: 'offline', prompt: 'consent', include_granted_scopes: 'true', state, login_hint: auth.currentUser?.email || '' });
+  location.assign(`https://accounts.google.com/o/oauth2/v2/auth?${q}`);
+}
+// Back from Google: ?code=…&state=… (or ?error=…). Read once, then tidied out of the address.
+export const calendarReturn = (() => {
+  const p = new URLSearchParams(location.search);
+  if (!p.has('state') || !(p.has('code') || p.has('error'))) return null;
+  let saved = null; try { saved = localStorage.getItem('calendarState'); localStorage.removeItem('calendarState'); } catch { /* none */ }
+  history.replaceState(null, '', `${location.pathname}#/settings`);
+  if (!saved || saved !== p.get('state')) return { error: 'That didn\'t work. Try connecting again.' };
+  if (p.get('error')) return { error: p.get('error') === 'access_denied' ? 'Calendar access wasn\'t allowed.' : `Google said: ${p.get('error')}` };
+  return { code: p.get('code') };
+})();
+export async function finishCalendar() {
+  if (calendarReturn?.error) throw new Error(calendarReturn.error);
+  await auth.authStateReady();
+  if (!auth.currentUser) throw new Error('Sign in, then connect again.');
+  return callFunction('calendarConnect', { code: calendarReturn.code, redirectUri: calRedirect() });
+}
+export const disconnectCalendar = () => callFunction('calendarDisconnect', {});
 
 // Generic writes under the household.
 export const setH = (path, data, merge = true) => setDoc(doc(db, hpath(...path)), data, { merge });

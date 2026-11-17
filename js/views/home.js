@@ -1,11 +1,11 @@
 // Parties: what's coming up, what still needs a present, the ways to add one,
 // and a nudge when a friend's birthday is probably coming round again.
-import * as S from '../store.js?v=8';
-import { birthdaysDue } from '../gifts.js?v=8';
-import { icon } from '../ui.js?v=8';
-import { st, esc, head, section, empty, plural, routes, actions, run, today, fmtDay, busy, failed, keep } from '../core.js?v=8';
-import { toWrap, eventRow, upcoming, past, undated, needing, children, rows, friends, firstName } from '../events.js?v=8';
-import { pickButton } from './scan.js?v=8';
+import * as S from '../store.js?v=10';
+import { birthdaysDue } from '../gifts.js?v=10';
+import { icon } from '../ui.js?v=10';
+import { st, esc, head, section, empty, plural, routes, actions, run, today, fmtDay, busy, failed, keep } from '../core.js?v=10';
+import { toWrap, eventRow, upcoming, past, undated, needing, children, rows, friends, firstName } from '../events.js?v=10';
+import { pickButton } from './scan.js?v=10';
 
 routes.home = () => {
   const reading = st.scans.filter(busy);
