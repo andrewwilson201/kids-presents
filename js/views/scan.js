@@ -5,9 +5,10 @@
 // and the readInvite function has Claude read it and add the party (needsCheck,
 // so you look it over). If that party is already in the calendar it isn't added
 // twice. This screen shows the progress and opens the party.
-import * as S from '../store.js?v=6';
-import { icon } from '../ui.js?v=6';
-import { st, esc, head, run, toast, render, routes, actions, hooks, route, busy, failed, keep } from '../core.js?v=6';
+import * as S from '../store.js?v=7';
+import { icon } from '../ui.js?v=7';
+import { st, esc, head, run, toast, render, routes, actions, hooks, route, busy, failed, keep } from '../core.js?v=7';
+import { offerSharedLink, looksLikeShopLink } from './wishes.js?v=7';
 
 // Make the picture small enough for the database (a document holds up to 1 MB).
 export async function compress(file, maxSide = 1600) {
@@ -66,7 +67,12 @@ async function takeShared() {
       return;
     }
     const text = await cache.match('shared-text');
-    if (text) { await cache.delete('shared-text'); await startTextScan(await text.text()); }
+    if (text) {
+      await cache.delete('shared-text');
+      const t = await text.text();
+      // A link shared from a shop's app is for a wish list (js/views/wishes.js).
+      if (looksLikeShopLink(t)) offerSharedLink(t); else await startTextScan(t);
+    }
     else toast('Nothing arrived. Try sharing it again.');
   } catch (e) { toast(e.message || 'The shared picture couldn\'t be read'); }
 }

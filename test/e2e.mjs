@@ -113,7 +113,7 @@ await a.waitForSelector('text=Sarah is getting this');
 await shot(a, '06-andrew-sees-sarah');
 const ev = (await H.collection('events').get()).docs[0];
 const clash = await a.evaluate(async id => {
-  const S = await import('/js/store.js?v=6');
+  const S = await import('/js/store.js?v=7');
   try { await S.claimPresent(id, { state: 'chosen', name: 'Something else' }); return 'claimed'; } catch (e) { return e.code; }
 }, ev.id);
 assert.equal(clash, 'claimed', 'a second claim is refused');
@@ -151,7 +151,8 @@ await a.click('button:has-text("Looks right")');
 step('Claude finds real products in the shops');
 await a.click('button:has-text("Find real presents in the shops")');
 await a.waitForSelector('text=Claude is looking in the shops');
-const asks = async kind => (await H.collection('asks').get()).docs.filter(d => d.data().kind === kind);
+// The app's write can take a moment to reach the database: wait for one.
+const asks = async kind => { for (let i = 0; ; i++) { const got = (await H.collection('asks').get()).docs.filter(d => d.data().kind === kind); if (got.length || i > 50) return got; await new Promise(r => setTimeout(r, 100)); } };
 await processAsk(await H.get(), (await asks('products'))[0].ref);
 await a.waitForSelector('text=Fake craft set from the shops');
 assert.equal(await a.locator('.products li').count(), 2, 'the product without an https link is dropped');
@@ -285,6 +286,62 @@ await shot(a, '11h-friends');
 await a.goto(`${SITE}?emulator#/home`);
 await a.click('button:has-text("Not this year")');
 await a.waitForSelector('text=Tom turns 7 around', { state: 'detached' });
+
+// 9e. Wish lists for our own children: both add ideas, drag them into order (by touch), tick off what's ordered.
+step('Wish lists: add, drag into order by touch, mark as ordered');
+await a.goto(`${SITE}?emulator#/wishes/charlie-christmas`);
+await a.waitForSelector('text=Charlie\'s Christmas list');
+await a.waitForSelector('text=Nothing on this list yet');
+for (const w of ['Lego Millennium Falcon', 'Nerf blaster']) { await a.fill('input[name=what]', w); await a.click('.wish-add button'); await a.waitForSelector(`.wish:has-text("${w}")`); }
+await a.fill('input[name=what]', 'https://www.argos.co.uk/product/1234567');
+await a.click('.wish-add button');
+await a.waitForSelector('.wish:has-text("Reading the link")');
+let wishAsk;
+for (let i = 0; i < 50 && !wishAsk; i++) { wishAsk = (await asks('link')).find(d => d.data().url === 'https://www.argos.co.uk/product/1234567'); if (!wishAsk) await a.waitForTimeout(100); }
+await processAsk(await H.get(), wishAsk.ref);
+await a.waitForSelector('.wish:has-text("LEGO City Police Car 60312")');
+await a.waitForSelector('.wish:has-text("£8.99")');
+await b.goto(`${SITE}?emulator#/wishes/charlie-christmas`);
+await b.waitForSelector('.wish:has-text("LEGO City Police Car 60312")');
+const order = async p => p.$$eval('.wishes > li .name', els => els.map(e => e.textContent.trim()));
+assert.deepEqual(await order(b), ['Lego Millennium Falcon', 'Nerf blaster', 'LEGO City Police Car 60312']);
+await shot(b, '11i-wishes');
+// Sarah drags the police car to the top with her finger.
+const touch = await b.context().newCDPSession(b);
+const grip = await (await b.$('.wishes > li:nth-child(3) .grip')).boundingBox();
+const top = await (await b.$('.wishes > li:nth-child(1)')).boundingBox();
+const x = grip.x + grip.width / 2; let y = grip.y + grip.height / 2;
+await touch.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
+for (; y > top.y + 10; y -= 12) { await touch.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x, y }] }); await b.waitForTimeout(16); }
+await shot(b, '11j-wishes-dragging');
+await touch.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+await b.waitForTimeout(500);
+assert.deepEqual(await order(b), ['LEGO City Police Car 60312', 'Lego Millennium Falcon', 'Nerf blaster']);
+await a.waitForFunction(() => document.querySelector('.wishes > li .name')?.textContent.includes('Police Car'));
+assert.deepEqual(await order(a), ['LEGO City Police Car 60312', 'Lego Millennium Falcon', 'Nerf blaster'], 'Andrew sees the new order');
+// Sarah orders the Nerf blaster; Andrew sees it's done.
+await b.click('.wish:has-text("Nerf blaster") >> text=Ordered it');
+await a.waitForSelector('.wish-done:has-text("Nerf blaster") >> text=ordered by Sarah');
+assert.deepEqual(await order(a), ['LEGO City Police Car 60312', 'Lego Millennium Falcon']);
+// Andrew moves the Falcon to Charlie's birthday list instead.
+await a.click('.wish:has-text("Millennium Falcon") >> text=Change');
+await a.fill('.wish-edit input[name=price]', '79.99');
+await a.selectOption('.wish-edit select[name=list]', 'charlie-birthday');
+await a.click('.wish-edit button:has-text("Save")');
+await a.waitForSelector('.wish:has-text("Millennium Falcon")', { state: 'detached' });
+await shot(a, '11k-wishes-ordered');
+await a.goto(`${SITE}?emulator#/wishes/charlie-birthday`);
+await a.waitForSelector('.wish:has-text("Millennium Falcon") >> text=£79.99');
+// A link shared from a shop's app offers the lists.
+await a.evaluate(async () => (await import('/js/views/wishes.js?v=7')).offerSharedLink('LEGO Friends Heartlake Cafe https://amzn.eu/d/abc123'));
+await a.waitForSelector('text=Add this to a wish list?');
+await shot(a, '11l-shared-link');
+await a.click('button:has-text("Sophie\'s Christmas list")');
+await a.waitForSelector('text=Sophie\'s Christmas list');
+await a.waitForSelector('.wish:has-text("LEGO Friends Heartlake Cafe")');
+const wishes = (await H.collection('wishes').get()).docs.map(d => d.data());
+assert.equal(wishes.length, 4);
+assert.equal(wishes.find(w => w.name === 'Nerf blaster').ordered.name, 'Sarah');
 
 // 10. Calendar and home.
 step('Calendar, home, settings');

@@ -16,6 +16,7 @@
 //   households/{hid}/scans/{id}        an invite for Claude to read: { text?, state: requested|done|failed, by, eventId, duplicate, message }
 //   households/{hid}/scanImages/{id}   the invite's picture, same id as its scan: { image (data URL) }
 //   households/{hid}/asks/{id}         "Ask Claude": { kind: ideas|products|link, budget, gender, age, interests, hint, url, eventId, state, ideas[] | products[] | product{}, by }
+//   households/{hid}/wishes/{id}       our own children's wish lists: { child, occasion: christmas|birthday, name, price, url, shop, image, notes, rank, ordered{uid,name,at}, by } (js/views/wishes.js)
 //   households/{hid}/devices/{id}      phones that get notifications: { token, uid, name, ua, createdAt }
 
 import {
@@ -37,7 +38,7 @@ if (emulator) {
 
 export { serverTimestamp, deleteField };
 
-const blank = () => ({ household: null, events: [], ideas: [], cupboard: [], scans: [], asks: [] });
+const blank = () => ({ household: null, events: [], ideas: [], cupboard: [], scans: [], asks: [], wishes: [] });
 const state = { user: null, profile: null, ready: false, ...blank() };
 const listeners = new Set();
 let unsubs = [];
@@ -90,6 +91,7 @@ function watchHousehold(hid) {
   unsubs.push(coll('events', 'events', orderBy('date', 'asc')));
   unsubs.push(coll('ideas', 'ideas'));
   unsubs.push(coll('cupboard', 'cupboard'));
+  unsubs.push(coll('wishes', 'wishes'));
   unsubs.push(coll('scans', 'scans', orderBy('createdAt', 'desc'), limit(5)));
   unsubs.push(coll('asks', 'asks', orderBy('createdAt', 'desc'), limit(12)));
 }
