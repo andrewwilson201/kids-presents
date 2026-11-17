@@ -6,12 +6,12 @@
 // households/{hid}/wishes/{id}: { child, occasion: christmas|birthday, name, price, url, shop, image, notes,
 //   rank (lower is higher up), autoName (name still the placeholder), pending (a link being read),
 //   ordered {uid, name, at} | null, by {uid, name}, createdAt }
-import * as S from '../store.js?v=6';
-import { daysBetween, isDay } from '../gifts.js?v=6';
-import { icon, thumb } from '../ui.js?v=6';
-import { st, esc, head, run, toast, money, today, fmtDay, routes, actions, arg, route, hooks, render, busy, failed, keep, hostOf, empty, plural, hold, toMillis, section } from '../core.js?v=6';
-import { children, firstName } from '../events.js?v=6';
-import { startTextScan } from './scan.js?v=6';
+import * as S from '../store.js?v=7';
+import { daysBetween, isDay } from '../gifts.js?v=7';
+import { icon, thumb } from '../ui.js?v=7';
+import { st, esc, head, run, toast, money, today, fmtDay, routes, actions, arg, route, hooks, render, busy, failed, keep, hostOf, empty, plural, hold, toMillis, section } from '../core.js?v=7';
+import { children, firstName } from '../events.js?v=7';
+import { startTextScan } from './scan.js?v=7';
 
 const OCCASIONS = { christmas: 'Christmas', birthday: 'Birthday' };
 const safeUrl = u => (/^https:\/\/[^\s"'<>]+$/.test(u || '') ? u : '');
@@ -178,7 +178,7 @@ hooks.rendered.push(() => {
   for (const w of st.wishes) {
     if (!w.pending || filled.has(w.id)) continue;
     const a = st.asks.find(x => x.kind === 'link' && x.url === w.pending);
-    const lost = !a && Date.now() - toMillis(w.createdAt) > 6 * 60e3; // the ask has gone from the recent ones
+    const lost = !a && !!toMillis(w.createdAt) && Date.now() - toMillis(w.createdAt) > 6 * 60e3; // the ask has gone from the recent ones
     if (a && busy(a)) continue;
     if (!a && !lost) continue;
     filled.add(w.id);
@@ -245,7 +245,7 @@ document.addEventListener('pointerdown', e => {
   try { grip.setPointerCapture(e.pointerId); } catch {}
   hold(true);
   const r = li.getBoundingClientRect();
-  drag = { li, ul: li.parentElement, id: li.dataset.id, offset: e.clientY - r.top, y: e.clientY, pid: e.pointerId, from: [...li.parentElement.children].indexOf(li) };
+  drag = { li, ul: li.parentElement, id: li.dataset.id, offset: e.clientY - r.top, y: e.clientY, y0: e.clientY, pid: e.pointerId, from: [...li.parentElement.children].indexOf(li) };
   li.classList.add('dragging');
   drag.ul.classList.add('sorting');
   if (navigator.vibrate) try { navigator.vibrate(8); } catch {}
@@ -260,36 +260,39 @@ document.addEventListener('pointermove', e => {
 document.addEventListener('pointerup', e => { if (drag && e.pointerId === drag.pid) drop(); });
 document.addEventListener('pointercancel', e => { if (drag && e.pointerId === drag.pid) drop(); });
 
-// Near the top or bottom of the screen, the page scrolls along.
+// Near the top or bottom of the screen, the page scrolls along (only the way the finger is going).
 function scrollTick() {
   if (!drag) return;
+  const top = document.getElementById('topbar')?.offsetHeight || 0;
   const bottom = window.innerHeight - (document.getElementById('tabs')?.offsetHeight || 0);
-  const edge = 80;
-  const v = drag.y < edge ? -(edge - drag.y) / 5 : drag.y > bottom - edge ? (drag.y - (bottom - edge)) / 5 : 0;
+  const edge = 60;
+  const v = drag.y < drag.y0 - 10 && drag.y < top + edge ? -(top + edge - drag.y) / 4
+    : drag.y > drag.y0 + 10 && drag.y > bottom - edge ? (drag.y - (bottom - edge)) / 4 : 0;
   if (v) { window.scrollBy(0, Math.max(-16, Math.min(16, v))); place(); }
   drag.raf = requestAnimationFrame(scrollTick);
 }
 // Swap the card with a neighbour once its middle passes theirs, then keep it under the finger.
 function place() {
   const { li, ul } = drag;
-  li.style.transform = '';
+  // Layout positions (offsetTop), which the cards' slide animations don't affect.
+  const ulTop = ul.getBoundingClientRect().top;
+  const cardTop = drag.y - drag.offset;
+  const mid = cardTop + li.offsetHeight / 2;
   for (let guard = 0; guard < 50; guard++) {
-    const r = li.getBoundingClientRect();
-    const mid = drag.y - drag.offset + r.height / 2;
     const prev = li.previousElementSibling, next = li.nextElementSibling;
     let other = null;
-    if (prev && mid < prev.getBoundingClientRect().top + prev.offsetHeight / 2) other = prev;
-    else if (next && mid > next.getBoundingClientRect().top + next.offsetHeight / 2) other = next;
+    if (prev && mid < ulTop + prev.offsetTop + prev.offsetHeight / 2) other = prev;
+    else if (next && mid > ulTop + next.offsetTop + next.offsetHeight / 2) other = next;
     if (!other) break;
-    const before = other.getBoundingClientRect().top;
-    if (other === prev) ul.insertBefore(li, prev); else ul.insertBefore(next, li);
+    const before = other.offsetTop;
+    // Move the other card, never the dragged one: moving it would lose hold of the finger.
+    if (other === prev) ul.insertBefore(prev, li.nextElementSibling); else ul.insertBefore(next, li);
     // The card that made way slides into its new place.
-    const shift = before - other.getBoundingClientRect().top;
-    other.style.transition = 'none'; other.style.transform = `translateY(${shift}px)`;
+    other.style.transition = 'none'; other.style.transform = `translateY(${before - other.offsetTop}px)`;
     void other.offsetWidth;
     other.style.transition = ''; other.style.transform = '';
   }
-  li.style.transform = `translateY(${drag.y - drag.offset - li.getBoundingClientRect().top}px)`;
+  li.style.transform = `translateY(${cardTop - ulTop - li.offsetTop}px)`;
   [...ul.children].forEach((x, n) => { const no = x.querySelector('.rankno'); if (no) no.textContent = n + 1; });
 }
 function drop() {

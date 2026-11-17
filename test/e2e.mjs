@@ -113,7 +113,7 @@ await a.waitForSelector('text=Sarah is getting this');
 await shot(a, '06-andrew-sees-sarah');
 const ev = (await H.collection('events').get()).docs[0];
 const clash = await a.evaluate(async id => {
-  const S = await import('/js/store.js?v=6');
+  const S = await import('/js/store.js?v=7');
   try { await S.claimPresent(id, { state: 'chosen', name: 'Something else' }); return 'claimed'; } catch (e) { return e.code; }
 }, ev.id);
 assert.equal(clash, 'claimed', 'a second claim is refused');
@@ -124,6 +124,7 @@ await b.fill('input[name=where]', 'Argos');
 await b.click('button:has-text("Bought it")');
 await b.waitForSelector('text=Bought by you');
 await a.waitForSelector('text=Bought by Sarah');
+await a.waitForSelector('text=a reminder the day before');
 await a.click('text=Wrapped');
 await a.waitForTimeout(300);
 await shot(a, '07-bought');
@@ -150,7 +151,8 @@ await a.click('button:has-text("Looks right")');
 step('Claude finds real products in the shops');
 await a.click('button:has-text("Find real presents in the shops")');
 await a.waitForSelector('text=Claude is looking in the shops');
-const asks = async kind => (await H.collection('asks').get()).docs.filter(d => d.data().kind === kind);
+// The app's write can take a moment to reach the database: wait for one.
+const asks = async kind => { for (let i = 0; ; i++) { const got = (await H.collection('asks').get()).docs.filter(d => d.data().kind === kind); if (got.length || i > 50) return got; await new Promise(r => setTimeout(r, 100)); } };
 await processAsk(await H.get(), (await asks('products'))[0].ref);
 await a.waitForSelector('text=Fake craft set from the shops');
 assert.equal(await a.locator('.products li').count(), 2, 'the product without an https link is dropped');
@@ -214,6 +216,7 @@ await b.goto(`${SITE}?emulator#/home`);
 await b.waitForSelector('text=Mia & Zac\'s birthday party');
 assert.equal(await b.locator('.event-row:has-text("Mia & Zac")').count(), 1, 'one row for the joint party');
 await shot(b, '11d-joint-home');
+await b.waitForSelector('.event-row:has-text("Olivia\'s 7th") >> text=Needs wrapping');
 // Take Zac off: it becomes an ordinary party again.
 await a.click('.seg.joint a:has-text("Mia")');
 await a.waitForSelector('text=Mia\'s present');
@@ -293,7 +296,8 @@ for (const w of ['Lego Millennium Falcon', 'Nerf blaster']) { await a.fill('inpu
 await a.fill('input[name=what]', 'https://www.argos.co.uk/product/1234567');
 await a.click('.wish-add button');
 await a.waitForSelector('.wish:has-text("Reading the link")');
-const wishAsk = (await asks('link')).find(d => d.data().url === 'https://www.argos.co.uk/product/1234567');
+let wishAsk;
+for (let i = 0; i < 50 && !wishAsk; i++) { wishAsk = (await asks('link')).find(d => d.data().url === 'https://www.argos.co.uk/product/1234567'); if (!wishAsk) await a.waitForTimeout(100); }
 await processAsk(await H.get(), wishAsk.ref);
 await a.waitForSelector('.wish:has-text("LEGO City Police Car 60312")');
 await a.waitForSelector('.wish:has-text("£8.99")');
@@ -329,7 +333,7 @@ await shot(a, '11k-wishes-ordered');
 await a.goto(`${SITE}?emulator#/wishes/charlie-birthday`);
 await a.waitForSelector('.wish:has-text("Millennium Falcon") >> text=£79.99');
 // A link shared from a shop's app offers the lists.
-await a.evaluate(async () => (await import('/js/views/wishes.js?v=6')).offerSharedLink('LEGO Friends Heartlake Cafe https://amzn.eu/d/abc123'));
+await a.evaluate(async () => (await import('/js/views/wishes.js?v=7')).offerSharedLink('LEGO Friends Heartlake Cafe https://amzn.eu/d/abc123'));
 await a.waitForSelector('text=Add this to a wish list?');
 await shot(a, '11l-shared-link');
 await a.click('button:has-text("Sophie\'s Christmas list")');

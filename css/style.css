@@ -485,7 +485,7 @@ details.more .btn.danger { color: var(--danger); }
 .wish-add { margin-top: 14px; }
 .wish-add .field { margin-bottom: 0; }
 .wish-add input[type=text] { flex: 1; min-width: 0; }
-.wishes { list-style: none; margin: 0; padding: 0; }
+.wishes { list-style: none; margin: 0; padding: 0; position: relative; }
 .wishes > li.wish { padding: 12px 14px 10px 6px; margin-bottom: 10px; position: relative; background: var(--surface); }
 .wish-top { align-items: flex-start; gap: 8px; }
 .wish .name { display: block; overflow-wrap: anywhere; font-weight: 600; color: var(--text); }

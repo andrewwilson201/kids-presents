@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { findDuplicate, friendsFrom, birthdaysDue, turningOn, samePerson, siblingsOf, groupEvents, joinNames, jointDayOf, eventsFromInvite, ageOn, dueReminders, matchIdeas, scoreIdea, eventFromInvite, pastPresents, daysBetween, addDays, shopLinks, fmt12 } from '../js/gifts.js';
+import { shopName, findDuplicate, friendsFrom, birthdaysDue, turningOn, samePerson, siblingsOf, groupEvents, joinNames, jointDayOf, eventsFromInvite, ageOn, dueReminders, matchIdeas, scoreIdea, eventFromInvite, pastPresents, daysBetween, addDays, shopLinks, fmt12 } from '../js/gifts.js';
 
 const kids = [{ id: 'charlie', name: 'Charlie', gender: 'boy', age: 7, ageOn: '2026-11-16' }, { id: 'sophie', name: 'Sophie', gender: 'girl', birthday: '2021-03-04' }];
 const party = (over = {}) => ({ id: 'e1', kind: 'party', child: 'sophie', friend: 'Olivia', date: '2026-11-28', start: '14:00', ...over });
@@ -33,8 +33,8 @@ test('reminders: first, second, reply-by, on the day, each once', () => {
   const bought = party({ present: { state: 'bought', name: 'Lego', by: { name: 'Andrew' } } });
   assert.deepEqual(dueReminders(bought, '2026-11-25', {}, kids), []);
   const day = dueReminders(bought, '2026-11-28', {}, kids);
-  assert.equal(day.length, 1); assert.equal(day[0].kind, 'dayOf'); assert.match(day[0].body, /Take Lego \(and a card\)/);
-  assert.doesNotMatch(dueReminders(party({ present: { state: 'wrapped', name: 'Lego' } }), '2026-11-28', {}, kids)[0].body, /card/);
+  assert.equal(day.length, 1); assert.equal(day[0].kind, 'dayOf'); assert.match(day[0].body, /Take Lego\. It isn't marked wrapped yet/);
+  assert.doesNotMatch(dueReminders(party({ present: { state: 'wrapped', name: 'Lego' } }), '2026-11-28', {}, kids)[0].body, /wrap/);
   // Late addition: only the second reminder, not both.
   assert.deepEqual(dueReminders(party(), '2026-11-26', {}, kids).map(r => r.kind), ['second']);
   // Reply-by.
@@ -134,7 +134,7 @@ test('joint parties: one event per birthday child, shown as one party', () => {
   assert.equal(joinNames(['Olivia', 'Max', 'Isla']), 'Olivia, Max & Isla');
   const d = jointDayOf([a, b]);
   assert.match(d.title, /Olivia & Max's party is today at 2pm/);
-  assert.match(d.body, /Olivia: Lego; Max: nothing bought yet/);
+  assert.match(d.body, /Olivia: Lego \(not wrapped yet\); Max: nothing bought yet/);
   // Each child's present has its own reminder.
   assert.deepEqual(dueReminders(a, '2026-11-25', {}, kids), []);
   assert.equal(dueReminders(b, '2026-11-25', {}, kids)[0].kind, 'second');
@@ -142,6 +142,27 @@ test('joint parties: one event per birthday child, shown as one party', () => {
   const evs = eventsFromInvite({ birthday_child: 'Olivia', turning_age: 7, birthday_child_gender: 'girl', other_birthday_children: [{ name: 'Max', turning_age: 6, gender: 'boy' }, { name: 'olivia', turning_age: 7, gender: '' }, { name: '', turning_age: 0, gender: '' }], invited_child: 'Charlie', date: '2026-11-28', venue: 'Jump Zone' }, kids, '2026-11-16');
   assert.deepEqual(evs.map(e => [e.friend, e.friendAge, e.friendGender, e.child, e.venue]), [['Olivia', 7, 'girl', 'charlie', 'Jump Zone'], ['Max', 6, 'boy', 'charlie', 'Jump Zone']]);
   assert.equal(eventsFromInvite({ birthday_child: 'Olivia' }, kids).length, 1);
+});
+
+test('a bought present that isn\'t wrapped: a reminder the day before', () => {
+  const bought = party({ present: { state: 'bought', name: 'Lego', by: { name: 'Andrew' } } });
+  assert.deepEqual(dueReminders(bought, '2026-11-26', {}, kids), []);
+  const wrap = dueReminders(bought, '2026-11-27', {}, kids);
+  assert.deepEqual(wrap.map(r => r.kind), ['wrap']);
+  assert.match(wrap[0].body, /Lego is bought but not wrapped/);
+  assert.deepEqual(dueReminders({ ...bought, reminded: { wrap: 1 } }, '2026-11-27', {}, kids), []);
+  assert.deepEqual(dueReminders(party({ present: { state: 'wrapped', name: 'Lego' } }), '2026-11-27', {}, kids), []);
+  assert.match(dueReminders(bought, '2026-11-28', {}, kids)[0].body, /isn't marked wrapped/);
+});
+
+test('shop names, Amazon links', async () => {
+  assert.equal(shopName('https://amzn.eu/d/0cpwOQyh'), 'Amazon');
+  assert.equal(shopName('https://www.argos.co.uk/product/1'), 'Argos');
+  const { execSync } = await import('node:child_process');
+  execSync('node tools/copy-shared.mjs', { cwd: new URL('..', import.meta.url) });
+  const { fromAmazonUrl } = await import('../functions/link.mjs');
+  assert.deepEqual(fromAmazonUrl('https://www.amazon.co.uk/Harry-Potter-Potions-Classroom/dp/B0CXYZ1234/ref=sr_1_1?crid=x'), { asin: 'B0CXYZ1234', title: 'Harry Potter Potions Classroom' });
+  assert.deepEqual(fromAmazonUrl('https://www.amazon.co.uk/dp/B0CXYZ1234?psc=1'), { asin: 'B0CXYZ1234', title: '' });
 });
 
 test('shop links', () => {

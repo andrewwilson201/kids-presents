@@ -3,11 +3,11 @@
 // claimPresent), so you can't both end up buying one. Your own choice can be the
 // exact thing: paste its shop link and the name, price and picture fill in. What
 // you buy is saved to the ideas, so it's there to suggest next time.
-import * as S from '../store.js?v=6';
-import { matchIdeas, pastPresents, ageOn, childrenFor, fmt12, shopLinks, needsPresent, presentSorted, daysBetween, isDay, nameKey } from '../gifts.js?v=6';
-import { icon, childBadge, thumb } from '../ui.js?v=6';
-import { st, esc, head, section, run, toast, money, fmtLong, fmtDay, today, routes, actions, arg, route, hooks, render, busy, failed, keep, hostOf } from '../core.js?v=6';
-import { children, eventTitle, partyTitle, sibs, whenWords, presentChip, budgetOf, firstName, priceText } from '../events.js?v=6';
+import * as S from '../store.js?v=7';
+import { matchIdeas, pastPresents, ageOn, childrenFor, fmt12, shopLinks, needsPresent, presentSorted, daysBetween, isDay, nameKey, shopName } from '../gifts.js?v=7';
+import { icon, childBadge, thumb } from '../ui.js?v=7';
+import { st, esc, head, section, run, toast, money, fmtLong, fmtDay, today, routes, actions, arg, route, hooks, render, busy, failed, keep, hostOf } from '../core.js?v=7';
+import { children, eventTitle, partyTitle, sibs, whenWords, presentChip, budgetOf, firstName, priceText } from '../events.js?v=7';
 
 const ev = () => st.events.find(x => x.id === arg);
 
@@ -100,7 +100,7 @@ function formPresent(f, e, was = {}) {
   const url = was.url || urlIn(f.url?.value);
   const info = linkInfo(e);
   return { name: (f.name?.value || '').trim().slice(0, 120) || was.name || '', price: Number(f.price.value) || was.price || null,
-    ...(url ? { url, shop: was.shop || info?.shop || hostOf(url), image: was.image || info?.image || '' } : {}) };
+    ...(url ? { url, shop: info?.shop || (was.shop && was.shop !== hostOf(url) ? was.shop : shopName(url)), image: was.image || info?.image || '' } : {}) };
 }
 // Bought: claim it, and keep it in the ideas so it's there to suggest another time.
 const buy = present => run(async () => {
@@ -120,7 +120,7 @@ const buy = present => run(async () => {
 });
 
 const shopChips = name => `<div class="row shops"><span class="small muted">Search for it:</span>${shopLinks(name).map(l => `<a class="chip link" href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.name)} ${icon('external')}</a>`).join('')}</div>`;
-const productLink = p => (safeUrl(p.url) ? `<a class="btn small tonal" href="${esc(p.url)}" target="_blank" rel="noopener">${icon('external')} Open at ${esc(p.shop || hostOf(p.url))}</a>` : '');
+const productLink = p => (safeUrl(p.url) ? `<a class="btn small tonal" href="${esc(p.url)}" target="_blank" rel="noopener">${icon('external')} Open at ${esc(shopName(p.url) === 'Amazon' ? 'Amazon' : p.shop || shopName(p.url))}</a>` : '');
 
 function presentCard(e, days, title) {
   const p = e.present || {};
@@ -132,6 +132,7 @@ function presentCard(e, days, title) {
       <span class="grow"><b>${esc(p.name || 'A present')}</b><br><span class="small muted">Bought by ${mine ? 'you' : esc(by)}${p.price ? `, ${money(p.price)}` : ''}${p.where ? ` from ${esc(p.where)}` : ''}${p.cupboardId ? ' (from the cupboard)' : ''}</span></span></div>
       ${safeUrl(p.url) ? `<div class="row shops">${productLink(p)}</div>` : ''}
       <div class="checks"><label class="row nowrap"><input type="checkbox" class="check" data-change="wrapped" ${p.state === 'wrapped' ? 'checked' : ''}> Wrapped, with a card</label></div>
+      ${p.state === 'bought' ? `<p class="small ${days != null && days <= 2 ? 'danger-text' : 'muted'}" style="margin:-4px 0 10px">${days != null && days <= 2 ? `${icon('alert')} ` : ''}Tick it once it's wrapped and the card is written. Until then it shows as needing wrapping, and you'll get a reminder the day before.</p>` : ''}
       <button class="btn ghost small" data-act="undoPresent">Undo</button></div>`;
   }
   if (p.state === 'chosen') {
