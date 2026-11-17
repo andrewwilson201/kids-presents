@@ -152,9 +152,12 @@ export async function syncAll(db, hid, now = new Date()) {
   return n;
 }
 
-// "Connect Google Calendar": the code from Google's sign-in popup becomes a lasting connection.
-export async function connect(db, hid, uid, code, name = '') {
-  const t = await tokenRequest({ grant_type: 'authorization_code', code, redirect_uri: 'postmessage' });
+// "Connect Google Calendar": the code Google sent back to the app becomes a lasting connection.
+// The app's address must be an Authorised redirect URI on the OAuth client.
+export const REDIRECTS = ['https://kids-presents.web.app/', 'https://kids-presents.firebaseapp.com/'];
+export async function connect(db, hid, uid, code, name = '', redirectUri = REDIRECTS[0]) {
+  if (!REDIRECTS.includes(redirectUri)) throw new CalendarError('Connect from the app at kids-presents.web.app.');
+  const t = await tokenRequest({ grant_type: 'authorization_code', code, redirect_uri: redirectUri });
   if (!t.refresh_token) throw new CalendarError('Google didn\'t give lasting access. Try again.');
   if (!String(t.scope || '').includes('calendar.events')) throw new CalendarError('Tick the box to let Party Presents add events to your calendar, then try again.');
   const email = emailFromIdToken(t.id_token || '');

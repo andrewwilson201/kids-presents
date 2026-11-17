@@ -1,9 +1,9 @@
 // Settings: the family (who's in, the children), budget, reminders,
 // notifications and the calendar feed.
-import * as S from '../store.js?v=8';
-import { ageOn, isDay, DEFAULT_REMINDERS } from '../gifts.js?v=8';
-import { icon, avatar, childBadge } from '../ui.js?v=8';
-import { st, esc, head, section, run, render, toast, today, routes, actions, hooks, route } from '../core.js?v=8';
+import * as S from '../store.js?v=9';
+import { ageOn, isDay, DEFAULT_REMINDERS } from '../gifts.js?v=9';
+import { icon, avatar, childBadge } from '../ui.js?v=9';
+import { st, esc, head, section, run, render, toast, today, routes, actions, hooks } from '../core.js?v=9';
 
 routes.settings = () => {
   const h = st.household;
@@ -77,15 +77,18 @@ function calendarCard(h) {
     <button class="btn tonal block" style="margin-top:12px" data-act="calConnect"${connecting ? ' disabled' : ''}>${icon('calendar')} ${connecting ? 'Connecting…' : 'Connect Google Calendar'}</button>
     <p class="tiny muted" style="margin-bottom:0">Google may say the app isn't verified: it's your own family app, so tap Advanced, then Go to kids-presents.</p></div>`;
 }
-hooks.rendered.push(() => { if (route === 'settings' && S.calendarReady) S.loadGoogle().catch(() => {}); });
-actions.calConnect = () => {
-  if (connecting) return;
-  const done = S.connectCalendar();
-  connecting = true; render();
+actions.calConnect = () => { if (!connecting) { connecting = true; render(); S.connectCalendar(); } };
+// Back from Google's page with the go-ahead.
+hooks.started.push(() => {
+  if (!S.calendarReturn) return;
+  connecting = !S.calendarReturn.error;
   run(async () => {
-    try { const r = await done; toast(r?.count ? `Connected. ${r.count === 1 ? '1 party is' : `${r.count} parties are`} in your calendars.` : 'Connected. New parties will go in your calendars.'); } finally { connecting = false; render(); }
+    try {
+      const r = await S.finishCalendar();
+      toast(r?.count ? `Connected. ${r.count === 1 ? '1 party is' : `${r.count} parties are`} in your calendars.` : 'Connected. New parties will go in your calendars.');
+    } finally { connecting = false; render(); }
   });
-};
+});
 actions.calDisconnect = () => {
   if (!confirm('Stop putting parties in your Google Calendars? The ones already there stay.')) return;
   run(S.disconnectCalendar, 'Stopped. Parties already in your calendars stay there.');

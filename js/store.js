@@ -144,17 +144,7 @@ export async function newInviteCode() {
 // ---------- Google Calendar invites (functions/gcal.mjs) ----------
 export const calendarReady = Boolean(GOOGLE_CLIENT_ID) && !emulator;
 const CAL_SCOPE = 'openid email https://www.googleapis.com/auth/calendar.events';
-let gis = null;
-// Google's sign-in script, loaded ahead so the popup opens straight from the tap.
-export function loadGoogle() {
-  gis ||= new Promise((resolve, reject) => {
-    const s = document.createElement('script');
-    s.src = 'https://accounts.google.com/gsi/client'; s.async = true;
-    s.onload = resolve; s.onerror = () => { gis = null; reject(new Error('Couldn\'t reach Google. Check you\'re online.')); };
-    document.head.appendChild(s);
-  });
-  return gis;
-}
+const calRedirect = () => `${location.origin}/`;
 async function callFunction(name, data) {
   const token = await auth.currentUser.getIdToken();
   const r = await fetch(`https://europe-west2-${FIREBASE_CONFIG.projectId}.cloudfunctions.net/${name}`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ data }) });
@@ -162,17 +152,29 @@ async function callFunction(name, data) {
   if (!r.ok || j.error) throw new Error(j.error?.message || 'Something went wrong. Try again.');
   return j.result;
 }
-// Google's popup: pick your account and allow calendar access. Then the function keeps the connection.
+// "Connect Google Calendar": off to Google's own page (a pop-up doesn't work in
+// the installed app on Android), which comes back to the app with a code.
 export function connectCalendar() {
-  return new Promise((resolve, reject) => {
-    if (!window.google?.accounts?.oauth2) { reject(new Error('Google is still loading. Try again in a moment.')); return; }
-    const client = window.google.accounts.oauth2.initCodeClient({
-      client_id: GOOGLE_CLIENT_ID, scope: CAL_SCOPE, ux_mode: 'popup', login_hint: auth.currentUser?.email || '',
-      callback: r => (r.error ? reject(new Error(r.error === 'access_denied' ? 'Calendar access wasn\'t allowed.' : r.error_description || r.error)) : callFunction('calendarConnect', { code: r.code }).then(resolve, reject)),
-      error_callback: e => reject(new Error(e?.type === 'popup_closed' ? 'The Google window was closed.' : 'Google\'s window couldn\'t open. Allow pop-ups and try again.')),
-    });
-    client.requestCode();
-  });
+  const state = randomCode(16);
+  try { localStorage.setItem('calendarState', state); } catch { /* checked on return */ }
+  const q = new URLSearchParams({ client_id: GOOGLE_CLIENT_ID, redirect_uri: calRedirect(), response_type: 'code', scope: CAL_SCOPE, access_type: 'offline', prompt: 'consent', include_granted_scopes: 'true', state, login_hint: auth.currentUser?.email || '' });
+  location.assign(`https://accounts.google.com/o/oauth2/v2/auth?${q}`);
+}
+// Back from Google: ?code=…&state=… (or ?error=…). Read once, then tidied out of the address.
+export const calendarReturn = (() => {
+  const p = new URLSearchParams(location.search);
+  if (!p.has('state') || !(p.has('code') || p.has('error'))) return null;
+  let saved = null; try { saved = localStorage.getItem('calendarState'); localStorage.removeItem('calendarState'); } catch { /* none */ }
+  history.replaceState(null, '', `${location.pathname}#/settings`);
+  if (!saved || saved !== p.get('state')) return { error: 'That didn\'t work. Try connecting again.' };
+  if (p.get('error')) return { error: p.get('error') === 'access_denied' ? 'Calendar access wasn\'t allowed.' : `Google said: ${p.get('error')}` };
+  return { code: p.get('code') };
+})();
+export async function finishCalendar() {
+  if (calendarReturn?.error) throw new Error(calendarReturn.error);
+  await auth.authStateReady();
+  if (!auth.currentUser) throw new Error('Sign in, then connect again.');
+  return callFunction('calendarConnect', { code: calendarReturn.code, redirectUri: calRedirect() });
 }
 export const disconnectCalendar = () => callFunction('calendarDisconnect', {});
 

@@ -1,8 +1,8 @@
 // How parties and birthdays look in lists: shared by the Parties, Calendar,
 // Ideas, Cupboard and Friends screens.
-import { daysBetween, fmt12, presentSorted, needsPresent, isDay, siblingsOf, groupEvents, joinNames, friendsFrom } from './gifts.js?v=8';
-import { icon, childBadge } from './ui.js?v=8';
-import { st, esc, fmtDay, today, money } from './core.js?v=8';
+import { daysBetween, fmt12, presentSorted, needsPresent, isDay, siblingsOf, groupEvents, joinNames, friendsFrom } from './gifts.js?v=9';
+import { icon, childBadge } from './ui.js?v=9';
+import { st, esc, fmtDay, today, money } from './core.js?v=9';
 
 export const children = () => st.household?.children || [];
 const ordinal = n => `${n}${(n % 100 >= 11 && n % 100 <= 13) ? 'th' : ({ 1: 'st', 2: 'nd', 3: 'rd' }[n % 10] || 'th')}`;
