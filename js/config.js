@@ -14,3 +14,8 @@ export const FIREBASE_CONFIG = {
 // Web push key for phone notifications, from Firebase console › Project settings ›
 // Cloud Messaging › Web Push certificates. Public by design, like the config above.
 export const VAPID_KEY = 'BOZMAklGfmU6YoXoe2ecwdcbETz19hBbnvA_EozV5zopp8qraAICRsDKF5VYhF7ewgNSWf3621tKYJTMWz5xLYs';
+
+// Google Calendar invites (Settings › Calendar): the OAuth client Firebase made
+// for Google sign-in (Google Cloud › Google Auth Platform › Clients). Public; its
+// secret is the GOOGLE_CLIENT_SECRET functions secret. Keep in step with functions/gcal.mjs.
+export const GOOGLE_CLIENT_ID = '';

@@ -193,35 +193,48 @@ export async function sendReminders(db, now = new Date()) {
 const icsText = s => String(s || '').replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/([,;])/g, '\\$1');
 const fold = line => { const out = []; let s = line; while (s.length > 73) { out.push(s.slice(0, 73)); s = ` ${s.slice(73)}`; } out.push(s); return out.join('\r\n'); };
 const stamp = d => d.toISOString().replace(/[-:]/g, '').replace(/\.\d+/, '');
-export function buildCalendar(hd, events, now = new Date()) {
+// One calendar entry for a party (a joint party's events together): used by
+// the feed below and by the Google Calendar invites (gcal.mjs).
+export function partyEntry(hd, group) {
   const kids = hd.children || [];
   const kidName = c => (c === 'both' ? kids.map(k => k.name).join(' & ') : kids.find(k => k.id === c)?.name || '');
+  const e = group[0];
+  const who = kidName(e.child);
+  const name = `${joinNames(group.map(x => x.friend || 'Party'))}'s ${e.kind === 'birthday' ? 'birthday' : 'party'}`;
+  const present = group.map(x => {
+    const p = x.present || {};
+    const label = group.length > 1 ? `Present for ${x.friend}` : 'Present';
+    return p.name ? `${label}: ${p.name} (${p.state === 'chosen' ? `${p.by?.name || 'someone'} is getting it` : p.state})` : `${label}: not sorted yet`;
+  }).join('\n');
+  const timed = Boolean(e.start) && e.kind !== 'birthday';
+  const end = timed ? (e.end && e.end > e.start ? e.end : `${String(Math.min(23, Number(e.start.slice(0, 2)) + 2)).padStart(2, '0')}${e.start.slice(2)}`) : '';
+  return {
+    id: e.groupId || e.id, date: e.date, timed, start: timed ? e.start : '', end, who, name,
+    title: `${who ? `${who}: ` : ''}${name}`,
+    location: [e.venue, e.address].filter(Boolean).join(', '),
+    details: [present, e.rsvpBy ? `Reply by ${e.rsvpBy}${e.contact ? ` to ${e.contact}` : ''}` : '', e.notes].filter(Boolean).join('\n'),
+    cancelled: Boolean(e.cancelled), notGoing: e.rsvp === 'no', kind: e.kind || 'party',
+  };
+}
+
+export function buildCalendar(hd, events, now = new Date()) {
   const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Party Presents//EN', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH', `X-WR-CALNAME:${icsText(`${hd.name || 'Family'} parties`)}`, 'X-WR-TIMEZONE:Europe/London', 'REFRESH-INTERVAL;VALUE=DURATION:PT6H'];
   // A joint party (one event per birthday child) is one calendar entry.
   for (const group of groupEvents(events)) {
     const e = group[0];
     if (!isDay(e.date) || daysBetween(e.date, iso(now)) > 400) continue;
-    const who = kidName(e.child);
-    const title = `${who ? `${who}: ` : ''}${joinNames(group.map(x => x.friend || 'Party'))}'s ${e.kind === 'birthday' ? 'birthday' : 'party'}${e.cancelled ? ' (cancelled)' : e.rsvp === 'no' ? ' (not going)' : ''}`;
-    const present = group.map(x => {
-      const p = x.present || {};
-      const label = group.length > 1 ? `Present for ${x.friend}` : 'Present';
-      return p.name ? `${label}: ${p.name} (${p.state === 'chosen' ? `${p.by?.name || 'someone'} is getting it` : p.state})` : `${label}: not sorted yet`;
-    }).join('\n');
+    const p = partyEntry(hd, group);
     const day = e.date.replace(/-/g, '');
-    const timed = e.start && e.kind !== 'birthday';
     lines.push('BEGIN:VEVENT', `UID:${e.id}@party-presents`, `DTSTAMP:${stamp(now)}`);
-    if (timed) {
-      const end = e.end && e.end > e.start ? e.end : `${String(Math.min(23, Number(e.start.slice(0, 2)) + 2)).padStart(2, '0')}${e.start.slice(2)}`;
-      lines.push(`DTSTART;TZID=Europe/London:${day}T${e.start.replace(':', '')}00`, `DTEND;TZID=Europe/London:${day}T${end.replace(':', '')}00`);
+    if (p.timed) {
+      lines.push(`DTSTART;TZID=Europe/London:${day}T${p.start.replace(':', '')}00`, `DTEND;TZID=Europe/London:${day}T${p.end.replace(':', '')}00`);
     } else {
       lines.push(`DTSTART;VALUE=DATE:${day}`, `DTEND;VALUE=DATE:${addDays(e.date, 1).replace(/-/g, '')}`);
     }
-    lines.push(fold(`SUMMARY:${icsText(title)}`));
-    const loc = [e.venue, e.address].filter(Boolean).join(', ');
-    if (loc) lines.push(fold(`LOCATION:${icsText(loc)}`));
-    lines.push(fold(`DESCRIPTION:${icsText([present, e.rsvpBy ? `Reply by ${e.rsvpBy}${e.contact ? ` to ${e.contact}` : ''}` : '', e.notes].filter(Boolean).join('\n'))}`));
-    if (e.cancelled) lines.push('STATUS:CANCELLED');
+    lines.push(fold(`SUMMARY:${icsText(`${p.title}${p.cancelled ? ' (cancelled)' : p.notGoing ? ' (not going)' : ''}`)}`));
+    if (p.location) lines.push(fold(`LOCATION:${icsText(p.location)}`));
+    lines.push(fold(`DESCRIPTION:${icsText(p.details)}`));
+    if (p.cancelled) lines.push('STATUS:CANCELLED');
     lines.push('END:VEVENT');
   }
   lines.push('END:VCALENDAR');

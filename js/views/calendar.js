@@ -1,9 +1,9 @@
 // Calendar: a month at a time, each party a dot in its child's colour. Tap a
 // day to see what's on. The phone calendar feed (Settings) is the other way to see it.
-import { addDays, isDay } from '../gifts.js?v=7';
-import { icon, childColour } from '../ui.js?v=7';
-import { st, esc, head, today, fmtDay, fmtLong, empty, routes, actions, render, arg } from '../core.js?v=7';
-import { eventRow, children, rows } from '../events.js?v=7';
+import { addDays, isDay } from '../gifts.js?v=8';
+import { icon, childColour } from '../ui.js?v=8';
+import { st, esc, head, today, fmtDay, fmtLong, empty, routes, actions, render, arg } from '../core.js?v=8';
+import { eventRow, children, rows } from '../events.js?v=8';
 
 let picked = null;
 const monthOf = () => (/^\d{4}-\d{2}$/.test(arg || '') ? arg : today().slice(0, 7));

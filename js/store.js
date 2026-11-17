@@ -5,7 +5,8 @@
 //   presentUsers/{uid}                 { householdId, name }
 //   invites/{code}                     { hid, name }
 //   households/{hid}                   { name, members[], memberNames{uid:name}, inviteCode, children[{id,name,gender,birthday?,age?,ageOn?}],
-//                                        budget, reminders{first,second,dayOf}, feedKey, friendSnooze{key:year}, createdAt }
+//                                        budget, reminders{first,second,dayOf}, feedKey, friendSnooze{key:year}, createdAt,
+//                                        calendar{email, name, uid, at, problem} Google Calendar invites, written by functions/gcal.mjs }
 //   households/{hid}/events/{id}       a party or a birthday: { kind, child, friend, friendAge, friendGender, interests, date, start, end,
 //                                        venue, address, rsvpBy, rsvp, contact, theme, notes, budget, card, cancelled, needsCheck, scanId,
 //                                        present{state: chosen|bought|wrapped, name, ideaId, price, where, url, shop, image, cupboardId, by{uid,name}, at}, reminded{},
@@ -25,7 +26,7 @@ import {
   doc, getDoc, setDoc, updateDoc, addDoc, deleteDoc, collection, query, orderBy, limit, onSnapshot, serverTimestamp, runTransaction,
   arrayUnion, deleteField, writeBatch, connectFirestoreEmulator, getMessaging, getToken, deleteToken, messagingSupported,
 } from '../vendor/firebase.js';
-import { FIREBASE_CONFIG, VAPID_KEY } from './config.js';
+import { FIREBASE_CONFIG, VAPID_KEY, GOOGLE_CLIENT_ID } from './config.js';
 
 export const emulator = new URLSearchParams(location.search).has('emulator') || !FIREBASE_CONFIG.apiKey;
 const app = initializeApp(FIREBASE_CONFIG.apiKey ? FIREBASE_CONFIG : { apiKey: 'demo', projectId: 'demo-presents', authDomain: 'localhost', appId: 'demo' });
@@ -139,6 +140,41 @@ export async function newInviteCode() {
   if (old) await deleteDoc(doc(db, 'invites', old)).catch(() => {});
   return code;
 }
+
+// ---------- Google Calendar invites (functions/gcal.mjs) ----------
+export const calendarReady = Boolean(GOOGLE_CLIENT_ID) && !emulator;
+const CAL_SCOPE = 'openid email https://www.googleapis.com/auth/calendar.events';
+let gis = null;
+// Google's sign-in script, loaded ahead so the popup opens straight from the tap.
+export function loadGoogle() {
+  gis ||= new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://accounts.google.com/gsi/client'; s.async = true;
+    s.onload = resolve; s.onerror = () => { gis = null; reject(new Error('Couldn\'t reach Google. Check you\'re online.')); };
+    document.head.appendChild(s);
+  });
+  return gis;
+}
+async function callFunction(name, data) {
+  const token = await auth.currentUser.getIdToken();
+  const r = await fetch(`https://europe-west2-${FIREBASE_CONFIG.projectId}.cloudfunctions.net/${name}`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ data }) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok || j.error) throw new Error(j.error?.message || 'Something went wrong. Try again.');
+  return j.result;
+}
+// Google's popup: pick your account and allow calendar access. Then the function keeps the connection.
+export function connectCalendar() {
+  return new Promise((resolve, reject) => {
+    if (!window.google?.accounts?.oauth2) { reject(new Error('Google is still loading. Try again in a moment.')); return; }
+    const client = window.google.accounts.oauth2.initCodeClient({
+      client_id: GOOGLE_CLIENT_ID, scope: CAL_SCOPE, ux_mode: 'popup', login_hint: auth.currentUser?.email || '',
+      callback: r => (r.error ? reject(new Error(r.error === 'access_denied' ? 'Calendar access wasn\'t allowed.' : r.error_description || r.error)) : callFunction('calendarConnect', { code: r.code }).then(resolve, reject)),
+      error_callback: e => reject(new Error(e?.type === 'popup_closed' ? 'The Google window was closed.' : 'Google\'s window couldn\'t open. Allow pop-ups and try again.')),
+    });
+    client.requestCode();
+  });
+}
+export const disconnectCalendar = () => callFunction('calendarDisconnect', {});
 
 // Generic writes under the household.
 export const setH = (path, data, merge = true) => setDoc(doc(db, hpath(...path)), data, { merge });
