@@ -55,7 +55,10 @@ await a.waitForTimeout(500);
 await shot(a, '02-home-empty');
 const hid = (await db.collection('households').get()).docs.map(d => d.id).pop();
 const H = db.collection('households').doc(hid);
-assert.ok((await H.collection('ideas').count().get()).data().count >= 100, 'starter ideas loaded');
+// The starter ideas are written in batches after the family is made: wait for them.
+const ideaCount = async () => (await H.collection('ideas').count().get()).data().count;
+for (let i = 0; i < 40 && (await ideaCount()) < 100; i++) await a.waitForTimeout(250);
+assert.ok((await ideaCount()) >= 100, 'starter ideas loaded');
 
 // 2. Sarah joins with the invite link.
 step('Sarah joins with the invite link');
