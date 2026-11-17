@@ -31,7 +31,7 @@ It's built the same way as [weekly-shop-app](https://github.com/andrewwilson201/
      gcloud projects add-iam-policy-binding kids-presents --member="serviceAccount:$SA" --role="roles/$r" --condition=None --quiet > /dev/null && echo "added $r"
    done
    ```
-3. Google Calendar invites: turn on the Google Calendar API in Google Cloud, publish the OAuth consent screen (Google Auth Platform › Audience) so the connection doesn't expire after 7 days, put the Web client's ID in `js/config.js` and `functions/gcal.mjs`, and set its secret: `firebase functions:secrets:set GOOGLE_CLIENT_SECRET --project kids-presents`.
+3. Google Calendar invites: turn on the Google Calendar API in Google Cloud, publish the OAuth consent screen (Google Auth Platform › Audience) so the connection doesn't expire after 7 days, add `https://kids-presents.web.app/` to the Web client's Authorised redirect URIs, put its ID in `js/config.js` and `functions/gcal.mjs`, and set its secret: `firebase functions:secrets:set GOOGLE_CLIENT_SECRET --project kids-presents`.
 4. The Claude API key, as a functions secret: `firebase functions:secrets:set ANTHROPIC_API_KEY --project kids-presents`. It's pay-as-you-go from console.anthropic.com; reading an invite, asking for ideas or searching the shops costs a few pence each.
 
 After that, everything deploys from GitHub on each push to `main`, by the `Test and deploy` workflow: the tests run first, and only if they pass are the site, the database rules and the functions published. It can also be run by hand from the Actions tab.

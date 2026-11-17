@@ -95,7 +95,7 @@ export const calendarConnect = onCall(gopts, plain(async req => {
   const { uid, hid, h } = await callerHousehold(req);
   const code = String(req.data?.code || '');
   if (!code) throw new HttpsError('invalid-argument', 'No code from Google.');
-  return connect(db, hid, uid, code, h.data().memberNames?.[uid] || '');
+  return connect(db, hid, uid, code, h.data().memberNames?.[uid] || '', String(req.data?.redirectUri || ''));
 }));
 export const calendarDisconnect = onCall(gopts, plain(async req => {
   const { hid } = await callerHousehold(req);
