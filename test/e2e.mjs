@@ -113,7 +113,7 @@ await a.waitForSelector('text=Sarah is getting this');
 await shot(a, '06-andrew-sees-sarah');
 const ev = (await H.collection('events').get()).docs[0];
 const clash = await a.evaluate(async id => {
-  const S = await import('/js/store.js?v=7');
+  const S = await import('/js/store.js?v=8');
   try { await S.claimPresent(id, { state: 'chosen', name: 'Something else' }); return 'claimed'; } catch (e) { return e.code; }
 }, ev.id);
 assert.equal(clash, 'claimed', 'a second claim is refused');
@@ -333,7 +333,7 @@ await shot(a, '11k-wishes-ordered');
 await a.goto(`${SITE}?emulator#/wishes/charlie-birthday`);
 await a.waitForSelector('.wish:has-text("Millennium Falcon") >> text=£79.99');
 // A link shared from a shop's app offers the lists.
-await a.evaluate(async () => (await import('/js/views/wishes.js?v=7')).offerSharedLink('LEGO Friends Heartlake Cafe https://amzn.eu/d/abc123'));
+await a.evaluate(async () => (await import('/js/views/wishes.js?v=8')).offerSharedLink('LEGO Friends Heartlake Cafe https://amzn.eu/d/abc123'));
 await a.waitForSelector('text=Add this to a wish list?');
 await shot(a, '11l-shared-link');
 await a.click('button:has-text("Sophie\'s Christmas list")');
@@ -352,7 +352,7 @@ await a.goto(`${SITE}?emulator#/home`);
 await a.waitForSelector('text=Coming up');
 await shot(a, '13-home');
 await a.goto(`${SITE}?emulator#/settings`);
-await a.waitForSelector('text=Phone calendar');
+await a.waitForSelector('text=Calendar feed link');
 await shot(a, '14-settings');
 await a.goto(`${SITE}?emulator#/ideas`);
 await a.waitForSelector('text=From your ideas');
@@ -373,6 +373,61 @@ const events = (await H.collection('events').get()).docs.map(d => ({ id: d.id, .
 const ics = buildCalendar((await H.get()).data(), events);
 writeFileSync(new URL('calendar.ics', shots), ics);
 assert.match(ics, /Olivia/);
+
+// 12. Google Calendar invites, against a pretend Google.
+step('Parties go to Google Calendar, with the others invited');
+const { syncAll, syncParty, useFetch, eventId } = await import('../functions/gcal.mjs');
+const calls = [];
+const store = new Map();
+useFetch(async (url, o = {}) => {
+  const u = new URL(url); const body = o.body && o.headers?.['Content-Type'] === 'application/json' ? JSON.parse(o.body) : null;
+  calls.push({ method: o.method, path: u.pathname, send: u.searchParams.get('sendUpdates'), body });
+  const json = (status, j = {}) => ({ ok: status < 300, status, json: async () => j });
+  if (u.hostname === 'oauth2.googleapis.com') return json(200, { access_token: 'at' });
+  const id = u.pathname.split('/events/')[1];
+  if (o.method === 'POST') { if (store.has(body.id)) return json(409); store.set(body.id, body); return json(200, body); }
+  if (o.method === 'PATCH') { if (!store.has(id)) return json(404); store.set(id, { ...store.get(id), ...body }); return json(200, body); }
+  if (o.method === 'DELETE') { if (!store.has(id)) return json(410); store.get(id).status = 'cancelled'; return { ok: true, status: 204, json: async () => ({}) }; }
+  return json(404);
+});
+const hd = (await H.get()).data();
+const andrewUid = hd.members[0];
+await db.collection('calendarLinks').doc(hid).set({ refreshToken: 'rt', uid: andrewUid, email: 'andrew@example.com' });
+const added = await syncAll(db, hid);
+assert.ok(added > 0, 'upcoming parties added');
+const firstPost = calls.find(c => c.method === 'POST' && c.path.includes('/events'));
+assert.equal(firstPost.send, 'all', 'the others get an invite');
+assert.equal(firstPost.body.attendees.length, 1, 'Sarah invited (not Andrew himself)');
+assert.match(firstPost.body.attendees[0].email, /^sarah/);
+// Nothing changed: nothing sent again.
+calls.length = 0;
+assert.equal(await syncAll(db, hid), 0);
+assert.ok(!calls.some(c => c.path.includes('/events')), 'no writes when nothing changed');
+// A joint party is one event.
+const jointEvs = events.filter(e => e.groupId);
+if (jointEvs.length) assert.equal([...store.keys()].filter(k => k === eventId(hid, jointEvs[0].groupId)).length, 1);
+// The time changes: the others are told. The present moves on: quietly.
+const one = events.find(e => !e.groupId && e.date >= today && e.kind !== 'birthday' && !e.cancelled && e.rsvp !== 'no');
+calls.length = 0;
+await H.collection('events').doc(one.id).update({ start: '10:00', end: '12:00' });
+assert.equal(await syncParty(db, hid, one.id), 'sent');
+assert.equal(store.get(eventId(hid, one.id)).start.dateTime, `${one.date}T10:00:00`);
+await H.collection('events').doc(one.id).update({ 'present.name': 'Something else' });
+assert.equal(await syncParty(db, hid, one.id), 'updated');
+assert.equal(calls.at(-1).send, 'none');
+// Not going: taken out of the calendars.
+await H.collection('events').doc(one.id).update({ rsvp: 'no' });
+assert.equal(await syncParty(db, hid, one.id), 'removed');
+assert.equal(store.get(eventId(hid, one.id)).status, 'cancelled');
+// Going after all: back in.
+await H.collection('events').doc(one.id).update({ rsvp: 'yes' });
+assert.equal(await syncParty(db, hid, one.id), 'sent');
+assert.equal(store.get(eventId(hid, one.id)).status, 'confirmed');
+await H.update({ calendar: { email: 'andrew@example.com', name: 'Andrew Wilson', uid: andrewUid, at: new Date() } });
+await a.goto(`${SITE}?emulator#/settings`);
+await a.waitForSelector('text=In your Google Calendars');
+await a.locator('text=In your Google Calendars').scrollIntoViewIfNeeded();
+await a.screenshot({ path: new URL('16-calendar-connected.png', shots).pathname });
 
 await browser.close();
 console.log(process.exitCode ? 'Finished with errors' : 'All good');
