@@ -3,11 +3,11 @@
 // round again), and typing a known friend's name fills in what we know.
 // A joint party has more than one birthday child: each is saved as its own
 // event with its own present, sharing a groupId and the party's details (js/gifts.js).
-import * as S from '../store.js?v=5';
-import { isDay, isTime, findDuplicate, samePerson, turningOn, addDays } from '../gifts.js?v=5';
-import { icon } from '../ui.js?v=5';
-import { st, esc, head, run, toast, render, routes, actions, hooks, arg, resetKeep, keep, today, fmtLong } from '../core.js?v=5';
-import { children, partyTitle, sibs, friends } from '../events.js?v=5';
+import * as S from '../store.js?v=6';
+import { isDay, isTime, findDuplicate, samePerson, turningOn, addDays } from '../gifts.js?v=6';
+import { icon } from '../ui.js?v=6';
+import { st, esc, head, run, toast, render, routes, actions, hooks, arg, resetKeep, keep, today, fmtLong } from '../core.js?v=6';
+import { children, partyTitle, sibs, friends } from '../events.js?v=6';
 
 // How many extra birthday children the form shows (a joint party).
 let extraFor = null, extraCount = 0;

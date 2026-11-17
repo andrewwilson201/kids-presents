@@ -137,12 +137,12 @@ main { max-width: 680px; margin: 0 auto; padding: 8px 16px calc(var(--tabbar) + 
 
 /* ---------- tab bar ---------- */
 .tabs {
-  position: fixed; bottom: 0; left: 0; right: 0; z-index: 30; display: grid; grid-template-columns: repeat(4, 1fr);
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 30; display: grid; grid-template-columns: repeat(5, 1fr);
   background: color-mix(in srgb, var(--surface) 88%, transparent); backdrop-filter: saturate(1.6) blur(16px); -webkit-backdrop-filter: saturate(1.6) blur(16px);
   border-top: 1px solid var(--line); padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
 }
 .tabs a { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 2px 2px 4px; font: 600 11px/1.2 var(--sans); color: var(--faint); text-decoration: none; }
-.tabs a .ic { display: grid; place-items: center; width: 52px; height: 30px; border-radius: 99px; transition: background .15s, color .15s; }
+.tabs a .ic { display: grid; place-items: center; width: 48px; height: 30px; border-radius: 99px; transition: background .15s, color .15s; }
 .tabs a .ic svg { width: 22px; height: 22px; }
 .tabs a.on { color: var(--text); }
 .tabs a.on .ic { background: var(--accent-soft); color: var(--accent-soft-text); }
@@ -477,3 +477,34 @@ details.more .btn.danger { color: var(--danger); }
 .link-status .spinner { vertical-align: -3px; margin-right: 6px; }
 .present .bought-form .row input[type=text] { flex: 1; min-width: 0; }
 .present .own .field { margin-bottom: 0; }
+
+/* Wish lists: cards dragged into order by their handle */
+.seg.wish-kids { margin-bottom: 8px; }
+.seg a svg { width: 15px; height: 15px; vertical-align: -2px; }
+.seg a .count { font-size: 12px; color: var(--faint); font-weight: 600; }
+.wish-add { margin-top: 14px; }
+.wish-add .field { margin-bottom: 0; }
+.wish-add input[type=text] { flex: 1; min-width: 0; }
+.wishes { list-style: none; margin: 0; padding: 0; }
+.wishes > li.wish { padding: 12px 14px 10px 6px; margin-bottom: 10px; position: relative; background: var(--surface); }
+.wish-top { align-items: flex-start; gap: 8px; }
+.wish .name { display: block; overflow-wrap: anywhere; font-weight: 600; color: var(--text); }
+.wish a.name svg, .wish-done a.name svg { width: 13px; height: 13px; vertical-align: -1px; color: var(--info); }
+.wish .meta, .wish-done .meta { display: block; font-size: 13px; color: var(--muted); margin-top: 2px; overflow-wrap: anywhere; }
+.wish .meta.note { color: var(--text); font-style: italic; }
+.wish .grow { flex: 1; min-width: 0; padding-top: 2px; }
+.wish-acts { gap: 4px; margin: 8px 0 0 34px; }
+.wish-edit { margin: 12px 0 2px 8px; border-top: 1px solid var(--line); padding-top: 12px; }
+.grip { flex: none; width: 34px; height: 48px; margin: -4px -4px 0 0; display: grid; place-items: center; border: 0; background: none; color: var(--faint); border-radius: 10px; cursor: grab; touch-action: none; -webkit-user-select: none; user-select: none; }
+.grip:hover { background: var(--surface-2); color: var(--text); }
+.rankno { flex: none; width: 22px; height: 22px; margin-top: 2px; border-radius: 50%; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent-soft-text); font: 700 12px/1 var(--sans); }
+.wishes.sorting { -webkit-user-select: none; user-select: none; }
+.wishes.sorting > li:not(.dragging) { transition: transform .15s ease; }
+.wishes > li.dragging { z-index: 5; box-shadow: var(--shadow-2); cursor: grabbing; }
+.wishes > li.dragging .grip { color: var(--accent-ink); background: var(--accent-soft); }
+.wish-tip { margin: 2px 4px 0; }
+.wish-done > li { align-items: flex-start; }
+.ok-tile { background: var(--ok-soft); color: var(--ok-text); }
+.spinner.sm { width: 14px; height: 14px; border-width: 2px; display: inline-block; vertical-align: -2px; margin-right: 4px; }
+.shared-offer .row { gap: 6px; }
+.wish-add .row { margin-top: 6px; }

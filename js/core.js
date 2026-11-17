@@ -5,9 +5,9 @@
 // Every module imports this file (and store.js, gifts.js, ui.js) with the same
 // ?v= query, so they all share one copy. Bump it in every import when any of
 // the app's files change, so phones don't mix old and new files.
-import * as S from './store.js?v=5';
-import { iso } from './gifts.js?v=5';
-import { icon, avatar } from './ui.js?v=5';
+import * as S from './store.js?v=6';
+import { iso } from './gifts.js?v=6';
+import { icon, avatar } from './ui.js?v=6';
 
 export const $main = document.getElementById('main');
 export const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -80,7 +80,12 @@ function restore(focus) {
 
 // views: signIn and setup, for before there's a household (js/views/signin.js).
 export const gate = {};
+// While a card is being dragged (js/views/wishes.js), live updates wait: hold(true)
+// stops renders, hold(false) catches up with anything that came in meanwhile.
+let held = false, missed = false;
+export function hold(on) { held = on; if (!on && missed) { missed = false; render(); } }
 export function render() {
+  if (held) { missed = true; return; }
   const tabs = document.getElementById('tabs');
   const settings = document.getElementById('settingsLink');
   const ready = st.ready && st.user && st.household?.members;
