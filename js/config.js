@@ -18,4 +18,4 @@ export const VAPID_KEY = 'BOZMAklGfmU6YoXoe2ecwdcbETz19hBbnvA_EozV5zopp8qraAICRs
 // Google Calendar invites (Settings › Calendar): the OAuth client Firebase made
 // for Google sign-in (Google Cloud › Google Auth Platform › Clients). Public; its
 // secret is the GOOGLE_CLIENT_SECRET functions secret. Keep in step with functions/gcal.mjs.
-export const GOOGLE_CLIENT_ID = '';
+export const GOOGLE_CLIENT_ID = '61389624990-rfllrs0d82hm6v1ok1fvnrcst7gh0vgc.apps.googleusercontent.com';

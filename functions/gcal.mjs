@@ -19,7 +19,7 @@ import { partyEntry } from './tasks.mjs';
 
 // The OAuth client Firebase made for Google sign-in (Google Cloud › Google Auth Platform › Clients).
 // Public, like js/config.js; its secret is the GOOGLE_CLIENT_SECRET functions secret.
-export const GOOGLE_CLIENT_ID = '';
+export const GOOGLE_CLIENT_ID = '61389624990-rfllrs0d82hm6v1ok1fvnrcst7gh0vgc.apps.googleusercontent.com';
 export const SCOPE = 'openid email https://www.googleapis.com/auth/calendar.events';
 const SITE = process.env.SITE_URL || 'https://kids-presents.web.app/';
 const API = 'https://www.googleapis.com/calendar/v3/calendars/primary/events';
