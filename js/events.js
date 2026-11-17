@@ -1,8 +1,8 @@
 // How parties and birthdays look in lists: shared by the Parties, Calendar,
 // Ideas, Cupboard and Friends screens.
-import { daysBetween, fmt12, presentSorted, needsPresent, isDay, siblingsOf, groupEvents, joinNames, friendsFrom } from './gifts.js?v=5';
-import { icon, childBadge } from './ui.js?v=5';
-import { st, esc, fmtDay, today, money } from './core.js?v=5';
+import { daysBetween, fmt12, presentSorted, needsPresent, isDay, siblingsOf, groupEvents, joinNames, friendsFrom } from './gifts.js?v=6';
+import { icon, childBadge } from './ui.js?v=6';
+import { st, esc, fmtDay, today, money } from './core.js?v=6';
 
 export const children = () => st.household?.children || [];
 const ordinal = n => `${n}${(n % 100 >= 11 && n % 100 <= 13) ? 'th' : ({ 1: 'st', 2: 'nd', 3: 'rd' }[n % 10] || 'th')}`;
@@ -45,7 +45,7 @@ export function presentChip(e) {
   const by = p.by?.name ? esc(firstName(p.by.name)) : '';
   const mine = p.by?.uid === st.user?.uid;
   if (p.state === 'wrapped') return `<span class="chip ok">${icon('check')} Wrapped</span>`;
-  if (p.state === 'bought') return `<span class="chip ok">${icon('gift')} Bought${by ? ` by ${mine ? 'you' : by}` : ''}</span>`;
+  if (p.state === 'bought') return `<span class="chip ok">${icon('gift')} Bought${by ? ` by ${mine ? 'you' : by}` : ''}</span> <span class="chip warn">Needs wrapping</span>`;
   if (p.state === 'chosen') return `<span class="chip new">${icon('bag')} ${mine ? 'You\'re' : `${by} is`} getting it</span>`;
   const d = isDay(e.date) ? daysBetween(today(), e.date) : 99;
   const urgent = d <= (st.household?.reminders?.second ?? 3);
@@ -71,6 +71,8 @@ export const upcoming = () => st.events.filter(e => isDay(e.date) && e.date >= t
 export const past = () => st.events.filter(e => isDay(e.date) && e.date < today()).reverse();
 export const undated = () => st.events.filter(e => !isDay(e.date));
 // Parties that still need someone to get a present.
+// Bought for a party coming up, but not wrapped yet.
+export const toWrap = () => upcoming().filter(e => needsPresent(e) && e.present?.state === 'bought');
 export const needing = () => upcoming().filter(e => needsPresent(e) && !presentSorted(e));
 // Everyone whose party has been in the calendar (js/gifts.js friendsFrom).
 export const friends = () => friendsFrom(st.events, today());

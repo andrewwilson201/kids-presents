@@ -46,6 +46,7 @@ export const DEFAULT_REMINDERS = { first: 10, second: 3, dayOf: true };
 //   first:  `first` days before, if no present is bought yet
 //   second: `second` days before, if still nothing bought
 //   rsvp:   2 days before the reply-by date, if we haven't replied
+//   wrap:   the day before, if it's bought but not marked wrapped (with a card)
 //   dayOf:  the morning of the party: take the present (and card)
 export function dueReminders(e, today, settings = {}, children = []) {
   const s = { ...DEFAULT_REMINDERS, ...settings };
@@ -68,8 +69,11 @@ export function dueReminders(e, today, settings = {}, children = []) {
     const left = daysBetween(today, e.rsvpBy);
     if (left >= 0 && left <= 2) out.push({ kind: 'rsvp', title: `Reply to ${who}'s invite`, body: `They'd like an answer by ${left === 0 ? 'today' : left === 1 ? 'tomorrow' : new Date(`${e.rsvpBy}T12:00:00Z`).toLocaleDateString('en-GB', { weekday: 'long', timeZone: 'UTC' })}.${e.contact ? ` ${e.contact}` : ''}` });
   }
+  if (wanted && e.present?.state === 'bought' && days === 1 && !sent.wrap) {
+    out.push({ kind: 'wrap', title: `Wrap the present for ${what}`, body: `${e.present.name || 'The present'} is bought but not wrapped yet. It's tomorrow, so wrap it and write the card tonight.` });
+  }
   if (s.dayOf && days === 0 && !sent.dayOf && e.rsvp !== 'no') {
-    const p = e.present?.name ? `Take ${e.present.name}${e.present.state === 'wrapped' ? '' : ' (and a card)'}.` : 'There\'s no present marked as bought yet.';
+    const p = e.present?.name ? `Take ${e.present.name}${e.present.state === 'wrapped' ? '.' : '. It isn\'t marked wrapped yet, so wrap it and write the card first.'}` : 'There\'s no present marked as bought yet.';
     out.push({ kind: 'dayOf', title: `${what[0].toUpperCase()}${what.slice(1)} is today${e.start ? ` at ${fmt12(e.start)}` : ''}`, body: `${p}${e.venue ? ` ${e.venue}.` : ''}` });
   }
   return out;
@@ -126,6 +130,12 @@ export const SHOPS = [
   ['Smyths', q => `https://www.smythstoys.com/uk/en-gb/search/?text=${encodeURIComponent(q)}`],
   ['John Lewis', q => `https://www.johnlewis.com/search?search-term=${encodeURIComponent(q)}`],
 ];
+// A shop's name from a link to it: "Amazon" for amazon.co.uk or an amzn.eu short link.
+const SHOP_NAMES = { 'amazon.co.uk': 'Amazon', 'amazon.com': 'Amazon', 'amzn.eu': 'Amazon', 'amzn.to': 'Amazon', 'a.co': 'Amazon', 'argos.co.uk': 'Argos', 'smythstoys.com': 'Smyths', 'johnlewis.com': 'John Lewis', 'thetoyshop.com': 'The Entertainer', 'waterstones.com': 'Waterstones', 'tesco.com': 'Tesco', 'sainsburys.co.uk': 'Sainsbury\'s', 'hobbycraft.co.uk': 'Hobbycraft', 'whsmith.co.uk': 'WHSmith', 'lego.com': 'LEGO', 'very.co.uk': 'Very', 'boots.com': 'Boots', 'next.co.uk': 'Next', 'marksandspencer.com': 'M&S', 'ebay.co.uk': 'eBay', 'etsy.com': 'Etsy', 'theworks.co.uk': 'The Works' };
+export function shopName(url) {
+  let host = ''; try { host = new URL(url).hostname.toLowerCase().replace(/^(www|m|uk|smile)\./, ''); } catch { return ''; }
+  return SHOP_NAMES[host] || host.split('.')[0].replace(/^./, c => c.toUpperCase());
+}
 export const shopLinks = (q, shops = SHOPS) => shops.map(([name, url]) => ({ name, url: url(q) }));
 
 // ---------- friends ----------
@@ -257,7 +267,7 @@ export const joinNames = names => (names.length <= 1 ? (names[0] || '') : `${nam
 // The morning-of reminder for a joint party: one message, every present.
 export function jointDayOf(sibs) {
   const e = sibs[0];
-  const parts = sibs.map(s => `${s.friend || 'a friend'}: ${s.present?.name && presentSorted(s) ? s.present.name : needsPresent(s) ? 'nothing bought yet' : 'no present needed'}`);
+  const parts = sibs.map(s => `${s.friend || 'a friend'}: ${s.present?.name && presentSorted(s) ? `${s.present.name}${s.present.state === 'wrapped' ? '' : ' (not wrapped yet)'}` : needsPresent(s) ? 'nothing bought yet' : 'no present needed'}`);
   return { kind: 'dayOf', title: `${joinNames(sibs.map(s => s.friend || 'a friend'))}'s party is today${e.start ? ` at ${fmt12(e.start)}` : ''}`, body: `Presents to take. ${parts.join('; ')}. Don't forget the cards.${e.venue ? ` ${e.venue}.` : ''}` };
 }
 

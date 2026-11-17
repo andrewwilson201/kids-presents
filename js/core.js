@@ -5,9 +5,9 @@
 // Every module imports this file (and store.js, gifts.js, ui.js) with the same
 // ?v= query, so they all share one copy. Bump it in every import when any of
 // the app's files change, so phones don't mix old and new files.
-import * as S from './store.js?v=5';
-import { iso } from './gifts.js?v=5';
-import { icon, avatar } from './ui.js?v=5';
+import * as S from './store.js?v=6';
+import { iso } from './gifts.js?v=6';
+import { icon, avatar } from './ui.js?v=6';
 
 export const $main = document.getElementById('main');
 export const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));

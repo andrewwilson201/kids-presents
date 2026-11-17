@@ -3,11 +3,11 @@
 // round again), and typing a known friend's name fills in what we know.
 // A joint party has more than one birthday child: each is saved as its own
 // event with its own present, sharing a groupId and the party's details (js/gifts.js).
-import * as S from '../store.js?v=5';
-import { isDay, isTime, findDuplicate, samePerson, turningOn, addDays } from '../gifts.js?v=5';
-import { icon } from '../ui.js?v=5';
-import { st, esc, head, run, toast, render, routes, actions, hooks, arg, resetKeep, keep, today, fmtLong } from '../core.js?v=5';
-import { children, partyTitle, sibs, friends } from '../events.js?v=5';
+import * as S from '../store.js?v=6';
+import { isDay, isTime, findDuplicate, samePerson, turningOn, daysBetween } from '../gifts.js?v=6';
+import { icon } from '../ui.js?v=6';
+import { st, esc, head, run, toast, render, routes, actions, hooks, arg, resetKeep, keep, today, fmtLong } from '../core.js?v=6';
+import { children, partyTitle, sibs, friends } from '../events.js?v=6';
 
 // How many extra birthday children the form shows (a joint party).
 let extraFor = null, extraCount = 0;
@@ -27,7 +27,7 @@ routes.edit = () => {
   if (arg && !on && !like && !e) return `${head('Not found')}<p class="muted">That party has been deleted.</p><a class="btn" href="#/home">Back to parties</a>`;
   const known = like ? friends().find(f => samePerson({ friend: f.name, child: f.child }, like)) : null;
   const v = e || (like ? { kind: like.kind || 'party', child: like.child, friend: like.friend, friendGender: known?.gender || like.friendGender, interests: known?.interests || like.interests, budget: '',
-    friendAge: turningOn(known, addDays(today(), 45)) || '', date: '' }
+    friendAge: known?.turned ? known.turned.age + Math.max(1, Math.round(daysBetween(known.turned.on, today()) / 365.25)) : '', date: '' }
     : { kind: 'party', child: children().length === 1 ? children()[0].id : '', budget: '', date: on });
   const more = keep['ev.more'] ?? !!(e && (e.address || e.rsvpBy || e.contact || e.theme || e.notes));
   const kids = children();

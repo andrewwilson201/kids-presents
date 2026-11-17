@@ -113,7 +113,7 @@ await a.waitForSelector('text=Sarah is getting this');
 await shot(a, '06-andrew-sees-sarah');
 const ev = (await H.collection('events').get()).docs[0];
 const clash = await a.evaluate(async id => {
-  const S = await import('/js/store.js?v=5');
+  const S = await import('/js/store.js?v=6');
   try { await S.claimPresent(id, { state: 'chosen', name: 'Something else' }); return 'claimed'; } catch (e) { return e.code; }
 }, ev.id);
 assert.equal(clash, 'claimed', 'a second claim is refused');
@@ -124,6 +124,7 @@ await b.fill('input[name=where]', 'Argos');
 await b.click('button:has-text("Bought it")');
 await b.waitForSelector('text=Bought by you');
 await a.waitForSelector('text=Bought by Sarah');
+await a.waitForSelector('text=a reminder the day before');
 await a.click('text=Wrapped');
 await a.waitForTimeout(300);
 await shot(a, '07-bought');
@@ -214,6 +215,7 @@ await b.goto(`${SITE}?emulator#/home`);
 await b.waitForSelector('text=Mia & Zac\'s birthday party');
 assert.equal(await b.locator('.event-row:has-text("Mia & Zac")').count(), 1, 'one row for the joint party');
 await shot(b, '11d-joint-home');
+await b.waitForSelector('.event-row:has-text("Olivia\'s 7th") >> text=Needs wrapping');
 // Take Zac off: it becomes an ordinary party again.
 await a.click('.seg.joint a:has-text("Mia")');
 await a.waitForSelector('text=Mia\'s present');

@@ -1,11 +1,11 @@
 // Parties: what's coming up, what still needs a present, the ways to add one,
 // and a nudge when a friend's birthday is probably coming round again.
-import * as S from '../store.js?v=5';
-import { birthdaysDue } from '../gifts.js?v=5';
-import { icon } from '../ui.js?v=5';
-import { st, esc, head, section, empty, plural, routes, actions, run, today, fmtDay, busy, failed, keep } from '../core.js?v=5';
-import { eventRow, upcoming, past, undated, needing, children, rows, friends, firstName } from '../events.js?v=5';
-import { pickButton } from './scan.js?v=5';
+import * as S from '../store.js?v=6';
+import { birthdaysDue } from '../gifts.js?v=6';
+import { icon } from '../ui.js?v=6';
+import { st, esc, head, section, empty, plural, routes, actions, run, today, fmtDay, busy, failed, keep } from '../core.js?v=6';
+import { toWrap, eventRow, upcoming, past, undated, needing, children, rows, friends, firstName } from '../events.js?v=6';
+import { pickButton } from './scan.js?v=6';
 
 routes.home = () => {
   const reading = st.scans.filter(busy);
@@ -18,9 +18,10 @@ routes.home = () => {
   const rest = soon.filter(e => !check.includes(e));
   const noDate = rows(undated());
   const due = birthdaysDue(friends(), today(), st.household.friendSnooze);
-  const sub = !soon.length ? 'No parties coming up.' : need.length
-    ? [none ? `${none} ${none === 1 ? 'needs' : 'need'} a present` : '', being ? `${being} being bought` : ''].filter(Boolean).join(' · ')
-    : 'Every party coming up has a present sorted.';
+  const wrap = toWrap().length;
+  const sub = !soon.length ? 'No parties coming up.' : need.length || wrap
+    ? [none ? `${none} ${none === 1 ? 'needs' : 'need'} a present` : '', being ? `${being} being bought` : '', wrap ? `${wrap} to wrap` : ''].filter(Boolean).join(' · ')
+    : 'Every present coming up is bought and wrapped.';
   return `${head('Parties', { eyebrow: esc(children().map(c => c.name).join(' & ')), sub })}
     <div class="row add-row">${pickButton('From invite')}<a class="btn tonal" href="#/edit">${icon('plus')} Add a party</a></div>
     ${reading.length ? `<a class="notice info" href="#/scan"><span class="spinner"></span><span class="grow"><b>Reading ${plural(reading.length, 'invite')}…</b><br>The party will appear here in a moment.</span></a>` : ''}
