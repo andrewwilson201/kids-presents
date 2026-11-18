@@ -357,9 +357,30 @@ for (let i = 0; i < 50 && !amz; i++) { amz = (await asks('link')).find(d => d.da
 await processAsk(await H.get(), amz.ref);
 assert.equal((await amz.ref.get()).data().named.title, 'Harry Potter Potions Classroom', 'the name was passed on before the price');
 await a.waitForSelector('.wish:has-text("Harry Potter Potions Classroom") .wish-price:has-text("£24.99")');
-await a.click('.wish:has-text("Harry Potter") >> text=Change');
-await a.click('.wish-edit >> text=Delete');
-await a.waitForSelector('.wish:has-text("Harry Potter")', { state: 'detached' });
+// Amazon hid the price, so it came from another UK shop: shown as roughly, and where from.
+const askFor = async part => { for (let i = 0; i < 50; i++) { const d = (await asks('link')).find(x => x.data().url.includes(part) && x.data().state === 'requested'); if (d) return d; await a.waitForTimeout(100); } };
+await a.fill('input[name=what]', 'https://www.amazon.co.uk/Lego-Ninjago-Green-Dragon/dp/B0ARGOS123');
+await a.click('.wish-add button');
+await processAsk(await H.get(), (await askFor('B0ARGOS123')).ref);
+await a.waitForSelector('.wish:has-text("Lego Ninjago Green Dragon") .wish-price:has-text("~£24.99")');
+await a.waitForSelector('.wish:has-text("Lego Ninjago Green Dragon") >> text=price from Argos');
+// Looking the price up again, from the price box.
+await a.click('.wish:has-text("Lego Ninjago Green Dragon") .wish-price');
+await a.click('text=Look the price up for me');
+await a.waitForSelector('.wish:has-text("Lego Ninjago Green Dragon") .wish-price.finding');
+await processAsk(await H.get(), (await askFor('B0ARGOS123')).ref);
+await a.waitForSelector('.wish:has-text("Lego Ninjago Green Dragon") .wish-price:has-text("~£24.99")');
+// Typing a price over it makes it a plain price.
+await a.click('.wish:has-text("Lego Ninjago Green Dragon") .wish-price');
+await a.fill('.wish-price-edit input[name=price]', '20');
+await a.click('.wish-price-edit button:has-text("Save")');
+await a.waitForSelector('.wish:has-text("Lego Ninjago Green Dragon") .wish-price:text-is("£20")');
+assert.equal(await a.locator('.wish:has-text("Lego Ninjago Green Dragon") >> text=price from Argos').count(), 0);
+for (const n of ['Harry Potter', 'Lego Ninjago Green Dragon']) {
+  await a.click(`.wish:has-text("${n}") >> text=Change`);
+  await a.click('.wish-edit >> text=Delete');
+  await a.waitForSelector(`.wish:has-text("${n}")`, { state: 'detached' });
+}
 // Andrew moves the Falcon to Charlie's birthday list instead.
 await a.click('.wish:has-text("Millennium Falcon") >> text=Change');
 await a.fill('.wish-edit input[name=price]', '79.99');
