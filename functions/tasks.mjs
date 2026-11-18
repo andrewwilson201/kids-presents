@@ -98,7 +98,8 @@ export async function processAsk(h, ref, now = new Date()) {
   try {
     // A pasted shop link: what is it, and what does it cost?
     if (a.kind === 'link') {
-      const product = await readProductLink(a.url);
+      // The name can come before the price (Amazon): the card shows it while the price is looked for.
+      const product = await readProductLink(a.url, named => ref.update({ named }));
       await ref.update({ state: 'done', product, doneAt: now });
       return product;
     }
