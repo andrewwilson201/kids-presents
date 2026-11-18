@@ -116,7 +116,7 @@ await a.waitForSelector('text=Sarah is getting this');
 await shot(a, '06-andrew-sees-sarah');
 const ev = (await H.collection('events').get()).docs[0];
 const clash = await a.evaluate(async id => {
-  const S = await import('/js/store.js?v=10');
+  const S = await import('/js/store.js?v=11');
   try { await S.claimPresent(id, { state: 'chosen', name: 'Something else' }); return 'claimed'; } catch (e) { return e.code; }
 }, ev.id);
 assert.equal(clash, 'claimed', 'a second claim is refused');
@@ -311,6 +311,8 @@ assert.deepEqual(await order(b), ['Lego Millennium Falcon', 'Nerf blaster', 'LEG
 await shot(b, '11i-wishes');
 // Sarah drags the police car to the top with her finger.
 const touch = await b.context().newCDPSession(b);
+// The whole list on screen (the spend total and add box sit above it).
+await b.evaluate(() => window.scrollTo(0, document.querySelector('.wishes').getBoundingClientRect().top + scrollY - 120));
 const grip = await (await b.$('.wishes > li:nth-child(3) .grip')).boundingBox();
 const top = await (await b.$('.wishes > li:nth-child(1)')).boundingBox();
 const x = grip.x + grip.width / 2; let y = grip.y + grip.height / 2;
@@ -326,6 +328,38 @@ assert.deepEqual(await order(a), ['LEGO City Police Car 60312', 'Lego Millennium
 await b.click('.wish:has-text("Nerf blaster") >> text=Ordered it');
 await a.waitForSelector('.wish-done:has-text("Nerf blaster") >> text=ordered by Sarah');
 assert.deepEqual(await order(a), ['LEGO City Police Car 60312', 'Lego Millennium Falcon']);
+// Prices and the estimated spend: Sarah plans to buy the police car, Andrew
+// types the Falcon's price straight onto its card and plans to buy that too.
+const total = p => p.$eval('.spend-total', e => e.textContent.trim());
+await a.waitForSelector('.spend:has-text("no price yet")');
+assert.equal(await total(a), '£0');
+await b.click('.wish:has-text("Police Car") button[data-act=wishPlanned]');
+await a.waitForSelector('.wish:has-text("Police Car") >> text=Sarah is getting this');
+await a.waitForFunction(() => document.querySelector('.spend-total')?.textContent.trim() === '£8.99');
+await a.click('.wish:has-text("Millennium Falcon") .wish-price');
+await a.fill('.wish-price-edit input[name=price]', '64.5');
+await a.click('.wish-price-edit button:has-text("Save")');
+await b.waitForSelector('.wish:has-text("Millennium Falcon") .wish-price:has-text("£64.50")');
+await a.click('.wish:has-text("Millennium Falcon") button[data-act=wishPlanned]');
+await b.waitForFunction(() => document.querySelector('.spend-total')?.textContent.trim() === '£73.49');
+await a.waitForSelector('.wish:has-text("Millennium Falcon") >> text=You\'re getting this');
+assert.match(await b.$eval('.spend', e => e.textContent), /£0 ordered · £73.49 planning to buy/);
+assert.match(await b.$eval('.spend', e => e.textContent), /1 present has no price yet/, 'the ordered Nerf blaster has no price');
+await shot(b, '11k1-wishes-spend');
+// Taking the plan off takes it out of the total.
+await a.click('.wish:has-text("Millennium Falcon") button[data-act=wishPlanned]');
+await b.waitForFunction(() => document.querySelector('.spend-total')?.textContent.trim() === '£8.99');
+// An Amazon link: the name comes from the address, then the price is looked up.
+await a.fill('input[name=what]', 'https://www.amazon.co.uk/Harry-Potter-Potions-Classroom/dp/B0CXYZ1234/ref=sr_1_1');
+await a.click('.wish-add button');
+let amz;
+for (let i = 0; i < 50 && !amz; i++) { amz = (await asks('link')).find(d => d.data().url.includes('B0CXYZ1234')); if (!amz) await a.waitForTimeout(100); }
+await processAsk(await H.get(), amz.ref);
+assert.equal((await amz.ref.get()).data().named.title, 'Harry Potter Potions Classroom', 'the name was passed on before the price');
+await a.waitForSelector('.wish:has-text("Harry Potter Potions Classroom") .wish-price:has-text("£24.99")');
+await a.click('.wish:has-text("Harry Potter") >> text=Change');
+await a.click('.wish-edit >> text=Delete');
+await a.waitForSelector('.wish:has-text("Harry Potter")', { state: 'detached' });
 // Andrew moves the Falcon to Charlie's birthday list instead.
 await a.click('.wish:has-text("Millennium Falcon") >> text=Change');
 await a.fill('.wish-edit input[name=price]', '79.99');
@@ -336,14 +370,14 @@ await shot(a, '11k-wishes-ordered');
 await a.goto(`${SITE}?emulator#/wishes/charlie-birthday`);
 await a.waitForSelector('.wish:has-text("Millennium Falcon") >> text=£79.99');
 // A link shared from a shop's app offers the lists.
-await a.evaluate(async () => (await import('/js/views/wishes.js?v=10')).offerSharedLink('LEGO Friends Heartlake Cafe https://amzn.eu/d/abc123'));
+await a.evaluate(async () => (await import('/js/views/wishes.js?v=11')).offerSharedLink('LEGO Friends Heartlake Cafe https://amzn.eu/d/abc123'));
 await a.waitForSelector('text=Add this to a wish list?');
 await shot(a, '11l-shared-link');
 await a.click('button:has-text("Sophie\'s Christmas list")');
 await a.waitForSelector('text=Sophie\'s Christmas list');
 await a.waitForSelector('.wish:has-text("LEGO Friends Heartlake Cafe")');
 const wishes = (await H.collection('wishes').get()).docs.map(d => d.data());
-assert.equal(wishes.length, 4);
+assert.equal(wishes.length, 4, "the Amazon one was deleted");
 assert.equal(wishes.find(w => w.name === 'Nerf blaster').ordered.name, 'Sarah');
 // After Christmas: the leftovers from before it are offered a move to the birthday list.
 step('Wish lists after the day: leftovers move to the birthday list');

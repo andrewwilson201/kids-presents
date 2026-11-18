@@ -2,12 +2,12 @@
 // interests; ask Claude for fresh ones (they're saved here too); like the good
 // ones, hide the duds, add your own. The present cupboard sits beside it (js/views/cupboard.js). From a party (#/ideas/{eventId}) the
 // filters start from that party and picking an idea sets it as the present.
-import * as S from '../store.js?v=10';
-import { matchIdeas, shopLinks, searchFor, pastPresents } from '../gifts.js?v=10';
-import { icon, thumb } from '../ui.js?v=10';
-import { st, esc, head, section, run, toast, money, empty, plural, routes, actions, arg, render, keep, hooks, busy, failed } from '../core.js?v=10';
-import { eventTitle, firstName, children, priceText } from '../events.js?v=10';
-import { queryFor, findProducts } from './event.js?v=10';
+import * as S from '../store.js?v=11';
+import { matchIdeas, shopLinks, searchFor, pastPresents } from '../gifts.js?v=11';
+import { icon, thumb } from '../ui.js?v=11';
+import { st, esc, head, section, run, toast, money, empty, plural, routes, actions, arg, render, keep, hooks, busy, failed } from '../core.js?v=11';
+import { eventTitle, firstName, children, priceText } from '../events.js?v=11';
+import { queryFor, findProducts } from './event.js?v=11';
 
 const BUDGETS = [5, 10, 15, 20, 25, 30];
 let filters = null, filtersFor = null, showAll = false;

@@ -163,6 +163,16 @@ test('shop names, Amazon links', async () => {
   const { fromAmazonUrl } = await import('../functions/link.mjs');
   assert.deepEqual(fromAmazonUrl('https://www.amazon.co.uk/Harry-Potter-Potions-Classroom/dp/B0CXYZ1234/ref=sr_1_1?crid=x'), { asin: 'B0CXYZ1234', title: 'Harry Potter Potions Classroom' });
   assert.deepEqual(fromAmazonUrl('https://www.amazon.co.uk/dp/B0CXYZ1234?psc=1'), { asin: 'B0CXYZ1234', title: '' });
+  // Amazon hides its prices: the name is passed on first, then the price is looked up.
+  const { readProductLink } = await import('../functions/link.mjs');
+  const was = process.env.CLAUDE_FAKE; process.env.CLAUDE_FAKE = '1';
+  const heard = [];
+  const got = await readProductLink('https://www.amazon.co.uk/Harry-Potter-Potions-Classroom/dp/B0CXYZ1234/ref=x', n => { heard.push(n); });
+  process.env.CLAUDE_FAKE = was;
+  assert.equal(heard[0].title, 'Harry Potter Potions Classroom');
+  assert.equal(heard[0].price, null);
+  assert.equal(got.price, 24.99);
+  assert.equal(got.url, 'https://www.amazon.co.uk/dp/B0CXYZ1234');
 });
 
 test('shop links', () => {

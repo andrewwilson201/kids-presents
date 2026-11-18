@@ -5,13 +5,14 @@
 //
 // households/{hid}/wishes/{id}: { child, occasion: christmas|birthday, name, price, url, shop, image, notes,
 //   rank (lower is higher up), autoName (name still the placeholder), pending (a link being read),
-//   ordered {uid, name, at} | null, by {uid, name}, createdAt }
-import * as S from '../store.js?v=10';
-import { daysBetween, isDay, iso } from '../gifts.js?v=10';
-import { icon, thumb } from '../ui.js?v=10';
-import { st, esc, head, run, toast, money, today, fmtDay, routes, actions, arg, route, hooks, render, busy, failed, keep, hostOf, empty, plural, hold, toMillis, section } from '../core.js?v=10';
-import { children, firstName } from '../events.js?v=10';
-import { startTextScan } from './scan.js?v=10';
+//   planned {uid, name, at} | null (one of you is planning to buy it), ordered {uid, name, at} | null,
+//   by {uid, name}, createdAt }
+import * as S from '../store.js?v=11';
+import { daysBetween, isDay, iso } from '../gifts.js?v=11';
+import { icon, thumb } from '../ui.js?v=11';
+import { st, esc, head, run, toast, money, today, fmtDay, routes, actions, arg, route, hooks, render, busy, failed, keep, hostOf, empty, plural, hold, toMillis, section } from '../core.js?v=11';
+import { children, firstName } from '../events.js?v=11';
+import { startTextScan } from './scan.js?v=11';
 
 const OCCASIONS = { christmas: 'Christmas', birthday: 'Birthday' };
 const safeUrl = u => (/^https:\/\/[^\s"'<>]+$/.test(u || '') ? u : '');
@@ -80,12 +81,12 @@ routes.wishes = () => {
   const all = itemsOf(kid.id, occ);
   const open = sortOpen(all);
   const done = all.filter(w => w.ordered).sort((a, b) => String(b.ordered.at || '').localeCompare(String(a.ordered.at || '')));
-  const spent = done.reduce((t, w) => t + (Number(w.price) || 0), 0);
-  const sub = [open.length ? `${plural(open.length, 'idea')} to choose from` : '', done.length ? `${done.length} ordered${spent ? ` (${money(Math.round(spent * 100) / 100)})` : ''}` : ''].filter(Boolean).join(' · ');
+  const sub = [open.length ? `${plural(open.length, 'idea')} to choose from` : '', done.length ? `${done.length} ordered` : ''].filter(Boolean).join(' · ');
   const noBirthday = occ === 'birthday' && !isDay(kid.birthday);
   return `${head(esc(listName(kid, occ)), { eyebrow: countdown(kid, occ) || 'Wish lists', sub })}
     ${sharedOffer()}
     ${afterTheDay(cur)}
+    ${all.length ? spendCard(open, done) : ''}
     ${kids.length > 1 ? `<div class="seg wish-kids">${kids.map(c => `<a class="${c.id === kid.id ? 'on' : ''}" href="#/wishes/${esc(c.id)}-${occ}">${esc(firstName(c.name))}${counter(c.id, occ)}</a>`).join('')}</div>` : ''}
     <div class="seg wish-occ">${Object.entries(OCCASIONS).map(([k, label]) => `<a class="${k === occ ? 'on' : ''}" href="#/wishes/${esc(kid.id)}-${k}">${icon(k === 'christmas' ? 'star' : 'cake')} ${label}${counter(kid.id, k)}</a>`).join('')}</div>
     ${noBirthday ? `<p class="small muted" style="margin:8px 4px 0">Add ${esc(firstName(kid.name))}'s birthday in <a href="#/settings">Settings</a> to see a countdown here.</p>` : ''}
@@ -100,26 +101,65 @@ routes.wishes = () => {
     ${done.length ? `${section('Ordered', { count: done.length })}<ul class="list card wish-done">${done.map(w => orderedRow(w)).join('')}</ul>
       <div class="row end"><button class="btn small ghost" data-act="clearOrdered">${icon('trash')} Clear the ordered ones</button></div>` : ''}`;
 };
+// ---------- what it will cost ----------
+// The estimate is what's been ordered plus what one of you is planning to buy.
+const pounds = n => money(Math.round(n * 100) / 100) || '£0';
+const priceOf = w => (Number(w.price) > 0 ? Number(w.price) : 0);
+export function spend(list) {
+  const planned = list.filter(w => w.planned && !w.ordered), ordered = list.filter(w => w.ordered);
+  const sum = l => l.reduce((t, w) => t + priceOf(w), 0);
+  return { planned: sum(planned), ordered: sum(ordered), total: sum(planned) + sum(ordered), counted: planned.length + ordered.length, noPrice: [...planned, ...ordered].filter(w => !priceOf(w)).length };
+}
+function spendCard(open, done) {
+  const s = spend([...open, ...done]);
+  const split = [s.ordered || done.length ? `${pounds(s.ordered)} ordered` : '', s.counted > done.length ? `${pounds(s.planned)} planning to buy` : ''].filter(Boolean).join(' · ');
+  const note = !s.counted ? 'Tap <b>Planning to buy</b> on the ideas you\'ll get and they add up here.'
+    : s.noPrice ? `${plural(s.noPrice, 'present')} ${s.noPrice === 1 ? 'has' : 'have'} no price yet, so ${s.noPrice === 1 ? 'it isn\'t' : 'they aren\'t'} counted.` : '';
+  return `<div class="card spend" aria-live="polite">
+    <span class="spend-label">Estimated spend</span>
+    <span class="spend-total">${pounds(s.total)}</span>
+    ${split ? `<span class="spend-split">${esc(split)}</span>` : ''}
+    ${note ? `<span class="spend-note">${note}</span>` : ''}
+  </div>`;
+}
+
 const counter = (kidId, occ) => { const n = itemsOf(kidId, occ).filter(w => !w.ordered).length; return n ? ` <span class="count">${n}</span>` : ''; };
 
 function meta(w) {
-  return [w.price ? money(w.price) : '', w.url ? (w.shop || hostOf(w.url)) : '', w.by?.name ? `added by ${firstName(w.by.name)}` : ''].filter(Boolean).map(esc).join(' · ');
+  return [w.url ? (w.shop || hostOf(w.url)) : '', w.by?.name ? `added by ${firstName(w.by.name)}` : ''].filter(Boolean).map(esc).join(' · ');
 }
 function title(w) {
   const reading = w.pending && !w.ordered;
   const name = reading && w.autoName ? '<span class="spinner sm"></span> Reading the link…' : esc(w.name);
   return safeUrl(w.url) ? `<a class="name" href="${esc(w.url)}" target="_blank" rel="noopener">${name} ${icon('external')}</a>` : `<span class="name">${name}</span>`;
 }
+function priceBit(w) {
+  if (keep.wishPrice === w.id) return '';
+  if (!w.price && w.pending) return `<span class="wish-price none finding" title="Looking for the price"><span class="spinner sm"></span> Price</span>`;
+  return w.price ? `<button type="button" class="wish-price" data-act="editPrice" data-id="${esc(w.id)}" aria-label="Price ${esc(money(w.price))}. Tap to change">${esc(money(w.price))}</button>`
+    : `<button type="button" class="wish-price none" data-act="editPrice" data-id="${esc(w.id)}">${icon('plus')} Price</button>`;
+}
+function priceForm(w) {
+  return `<form class="row nowrap wish-price-edit" data-form="savePrice" data-id="${esc(w.id)}">
+    <label class="price-in"><span aria-hidden="true">£</span><input type="number" name="price" inputmode="decimal" step="any" min="0" value="${esc(w.price ?? '')}" placeholder="0.00" aria-label="Price in pounds" data-keep="wishPrice.${esc(w.id)}"></label>
+    <button class="btn small primary">Save</button><button type="button" class="btn small ghost" data-act="editPrice" data-id="">Cancel</button>
+  </form>`;
+}
+const plannedBy = w => (w.planned ? (w.planned.uid === S.me().uid ? 'you' : firstName(w.planned.name)) : '');
 function card(w, n, cur) {
   const editing = keep.wishEdit === w.id;
-  return `<li class="wish card" data-id="${esc(w.id)}">
+  return `<li class="wish card${w.planned ? ' planned' : ''}" data-id="${esc(w.id)}">
     <div class="row nowrap wish-top">
       <button type="button" class="grip" data-grip aria-label="Drag to move ${esc(w.name)} up or down">${icon('grip')}</button>
       <span class="rankno" aria-hidden="true">${n + 1}</span>
       ${thumb(w.image)}
-      <span class="grow">${title(w)}<span class="meta">${meta(w)}</span>${w.notes ? `<span class="meta note">${esc(w.notes)}</span>` : ''}</span>
+      <span class="grow">${title(w)}<span class="meta">${meta(w)}</span>${w.notes ? `<span class="meta note">${esc(w.notes)}</span>` : ''}
+        ${w.planned ? `<span class="plan-tag">${icon('cart')} ${esc(plannedBy(w) === 'you' ? 'You\'re' : `${plannedBy(w)} is`)} getting this</span>` : ''}</span>
+      ${editing ? '' : priceBit(w)}
     </div>
+    ${keep.wishPrice === w.id && !editing ? priceForm(w) : ''}
     ${editing ? editForm(w, cur) : `<div class="row wish-acts">
+      <button class="btn small ${w.planned ? 'plan-on' : 'ghost plan-off'}" data-act="wishPlanned" data-id="${esc(w.id)}" aria-pressed="${w.planned ? 'true' : 'false'}">${icon(w.planned ? 'check' : 'cart')} Planning to buy</button>
       <button class="btn small tonal" data-act="wishOrdered" data-id="${esc(w.id)}">${icon('check')} Ordered it</button>
       <button class="btn small ghost" data-act="editWish" data-id="${esc(w.id)}">${icon('edit')} Change</button>
       ${n > 0 ? `<button class="btn small ghost" data-act="wishTop" data-id="${esc(w.id)}" aria-label="Move to the top">${icon('top')} Top</button>` : ''}</div>`}
@@ -225,7 +265,14 @@ hooks.rendered.push(() => {
     if (!w.pending || filled.has(w.id)) continue;
     const a = st.asks.find(x => x.kind === 'link' && x.url === w.pending);
     const lost = !a && !!toMillis(w.createdAt) && Date.now() - toMillis(w.createdAt) > 6 * 60e3; // the ask has gone from the recent ones
-    if (a && busy(a)) continue;
+    // Still looking for the price, but the name is known: put the name on the card now.
+    if (a && busy(a)) {
+      if (a.named?.title && w.autoName && !filled.has(`${w.id}:name`)) {
+        filled.add(`${w.id}:name`);
+        S.updateH(['wishes', w.id], { name: String(a.named.title).slice(0, 120), autoName: false, shop: a.named.shop || w.shop || '' }).catch(() => filled.delete(`${w.id}:name`));
+      }
+      continue;
+    }
     if (!a && !lost) continue;
     filled.add(w.id);
     const p = a?.state === 'done' ? a.product || {} : {};
@@ -244,7 +291,25 @@ hooks.rendered.push(() => {
 
 // ---------- changing ----------
 const byId = id => st.wishes.find(w => w.id === id);
-actions.editWish = el => { keep.wishEdit = el.dataset.id || null; render(); };
+actions.editWish = el => { keep.wishEdit = el.dataset.id || null; keep.wishPrice = null; render(); };
+// The price, typed straight onto the card (Amazon links can't fill it in).
+actions.editPrice = el => {
+  keep.wishPrice = el.dataset.id || null;
+  if (keep.wishPrice) { keep.wishEdit = null; delete keep[`wishPrice.${keep.wishPrice}`]; }
+  render();
+  if (keep.wishPrice) { const i = document.querySelector('.wish-price-edit input'); if (i) { i.focus(); try { i.select(); } catch {} } }
+};
+actions.savePrice = f => {
+  const w = byId(f.dataset.id); if (!w) return;
+  const v = f.price.value.trim(), n = Number(v);
+  if (v !== '' && !(n >= 0)) return;
+  keep.wishPrice = null; delete keep[`wishPrice.${w.id}`];
+  run(() => S.updateH(['wishes', w.id], { price: v === '' || n === 0 ? null : Math.round(n * 100) / 100 }), v === '' || n === 0 ? 'Price taken off' : `Price set to ${money(Math.round(n * 100) / 100)}`);
+};
+actions.wishPlanned = el => {
+  const w = byId(el.dataset.id); if (!w) return;
+  run(() => S.updateH(['wishes', w.id], { planned: w.planned ? null : { ...S.me(), at: new Date().toISOString() } }), w.planned ? 'No longer planning to buy' : 'Marked as planning to buy');
+};
 actions.saveWish = f => {
   const w = byId(f.dataset.id); if (!w) return;
   const name = f.name.value.trim().slice(0, 120); if (!name) return;

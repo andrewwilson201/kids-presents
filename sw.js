@@ -1,7 +1,7 @@
 // Service worker: makes Party Presents installable, keeps the last good copy of
 // the app for when you're offline, receives invite pictures shared from other
 // apps (WhatsApp › Share › Party Presents), and shows phone notifications.
-const CACHE = 'party-presents-v10';
+const CACHE = 'party-presents-v11';
 const SHARE = 'party-presents-share';
 
 self.addEventListener('install', () => self.skipWaiting());

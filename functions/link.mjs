@@ -8,6 +8,10 @@
 // still redirect to the full address, and that usually has the product's name
 // in it (amazon.co.uk/Harry-Potter-Potions-Classroom/dp/B0…). When it doesn't,
 // Claude looks the product up by its Amazon number (ASIN) with web search.
+// Either way, as Amazon won't show its price to us, Claude then looks for the
+// price on the web (a best effort: price checkers and shopping results often
+// carry it). The name is passed on first (onName) so the card fills in while
+// the price is still being looked for.
 import Anthropic from '@anthropic-ai/sdk';
 import { shopName } from './shared/gifts.js';
 export { shopName };
@@ -93,9 +97,11 @@ export function fromHtml(html) {
   return { title, price: cost, image };
 }
 
-async function viaClaude(url, asin = '') {
+async function viaClaude(url, asin = '', name = '') {
   const client = new Anthropic();
-  const ask = asin
+  const ask = name
+    ? `How much does this cost on Amazon UK today: "${name}"${asin ? ` (ASIN ${asin})` : ''}? Its page is ${url}. Fetch the page, or if Amazon won't show it, search the web${asin ? ` for "${asin}"` : ''} for its current Amazon UK price in pounds. Only use a price you actually saw for this exact product; never guess.`
+    : asin
     ? `What is the Amazon UK product with ASIN ${asin}? Its page is ${url}. Fetch the page, or if Amazon won't show it, search the web for "${asin}". Use only what you find, never guess.`
     : `Fetch this UK shop's product page and tell me what the product is: ${url}. If the page can't be fetched, search the web for it. Use only what you find; don't guess from the web address.`;
   const messages = [{ role: 'user', content: `${ask}\nReply with only a JSON object, no other words: {"title":"the product's name, under 80 characters, without the shop's name","price":9.99}\nUse null for the price unless you saw a current price in pounds. If you can't find the product, reply {"title":"","price":null}.` }];
@@ -111,11 +117,17 @@ async function viaClaude(url, asin = '') {
 }
 
 // -> { title, price, shop, url, image } or throws with words for the person.
-export async function readProductLink(raw) {
+// onName({ title, shop, url, image }) hears the name early when the price will take longer.
+export async function readProductLink(raw, onName = null) {
   const u = publicUrl(raw);
   if (!u) throw new Error('that doesn\'t look like a link to a shop');
   if (process.env.CLAUDE_FAKE === '1') {
-    if (isAmazon(String(u))) { const a = fromAmazonUrl(String(u)); return { title: a?.title || 'Fake Amazon product', price: null, shop: 'Amazon', url: amazonLink(String(u), a?.asin), image: '' }; }
+    if (isAmazon(String(u))) {
+      const a = fromAmazonUrl(String(u));
+      const found = { title: a?.title || 'Fake Amazon product', price: null, shop: 'Amazon', url: amazonLink(String(u), a?.asin), image: '' };
+      if (onName) await onName({ ...found });
+      return { ...found, price: /amzn\.eu\/d\/nopr/.test(String(u)) ? null : 24.99 };
+    }
     return { title: 'LEGO City Police Car 60312', price: 8.99, shop: shopName(String(u)), url: String(u), image: 'https://media.example-shop.co.uk/police-car.jpg' };
   }
   let page = { url: String(u), html: '' }, found = null;
@@ -127,5 +139,11 @@ export async function readProductLink(raw) {
   if (!found?.title) throw new Error(isAmazon(page.url) ? 'Amazon wouldn\'t say what it is' : 'the shop wouldn\'t show its page');
   const image = publicUrl(found.image) ? String(publicUrl(found.image)).slice(0, 600) : '';
   const link = isAmazon(page.url) ? amazonLink(page.url, amazon?.asin) : String(u);
-  return { title: found.title.slice(0, 120), price: found.price, shop: shopName(page.url), url: link.slice(0, 600), image };
+  const product = { title: found.title.slice(0, 120), price: found.price, shop: shopName(page.url), url: link.slice(0, 600), image };
+  // No price (Amazon hides it from us): show the name now, then look for the price.
+  if (product.price == null && isAmazon(page.url)) {
+    if (onName) { try { await onName({ ...product }); } catch (e) { console.log(`Couldn't pass the name on early: ${e.message}`); } }
+    try { product.price = (await viaClaude(link, amazon?.asin, product.title))?.price ?? null; } catch (e) { console.log(`Claude couldn't find a price for ${amazon?.asin || link}: ${e.message}`); }
+  }
+  return product;
 }
