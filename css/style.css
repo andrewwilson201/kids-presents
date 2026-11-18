@@ -528,3 +528,5 @@ details.more .btn.danger { color: var(--danger); }
 .btn.plan-off { border: 1px solid var(--line-strong); }
 .wish-price.finding { cursor: default; border-style: solid; border-color: var(--line); }
 .wish-price.finding .spinner { margin: 0; }
+.wish-price.about { font-weight: 650; }
+.wish-price-find { margin: 6px 0 0 30px; }

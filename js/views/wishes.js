@@ -4,6 +4,7 @@
 // off what's been ordered. Everything syncs live between you.
 //
 // households/{hid}/wishes/{id}: { child, occasion: christmas|birthday, name, price, url, shop, image, notes,
+//   priceAt (the shop an estimated price came from, when it isn't the link's own shop),
 //   rank (lower is higher up), autoName (name still the placeholder), pending (a link being read),
 //   planned {uid, name, at} | null (one of you is planning to buy it), ordered {uid, name, at} | null,
 //   by {uid, name}, createdAt }
@@ -126,7 +127,7 @@ function spendCard(open, done) {
 const counter = (kidId, occ) => { const n = itemsOf(kidId, occ).filter(w => !w.ordered).length; return n ? ` <span class="count">${n}</span>` : ''; };
 
 function meta(w) {
-  return [w.url ? (w.shop || hostOf(w.url)) : '', w.by?.name ? `added by ${firstName(w.by.name)}` : ''].filter(Boolean).map(esc).join(' · ');
+  return [w.url ? (w.shop || hostOf(w.url)) : '', w.price && w.priceAt ? `price from ${w.priceAt}` : '', w.by?.name ? `added by ${firstName(w.by.name)}` : ''].filter(Boolean).map(esc).join(' · ');
 }
 function title(w) {
   const reading = w.pending && !w.ordered;
@@ -136,14 +137,15 @@ function title(w) {
 function priceBit(w) {
   if (keep.wishPrice === w.id) return '';
   if (!w.price && w.pending) return `<span class="wish-price none finding" title="Looking for the price"><span class="spinner sm"></span> Price</span>`;
-  return w.price ? `<button type="button" class="wish-price" data-act="editPrice" data-id="${esc(w.id)}" aria-label="Price ${esc(money(w.price))}. Tap to change">${esc(money(w.price))}</button>`
+  return w.price ? `<button type="button" class="wish-price${w.priceAt ? ' about' : ''}" data-act="editPrice" data-id="${esc(w.id)}" aria-label="Price ${w.priceAt ? 'about ' : ''}${esc(money(w.price))}. Tap to change">${w.priceAt ? '~' : ''}${esc(money(w.price))}</button>`
     : `<button type="button" class="wish-price none" data-act="editPrice" data-id="${esc(w.id)}">${icon('plus')} Price</button>`;
 }
 function priceForm(w) {
   return `<form class="row nowrap wish-price-edit" data-form="savePrice" data-id="${esc(w.id)}">
     <label class="price-in"><span aria-hidden="true">£</span><input type="number" name="price" inputmode="decimal" step="any" min="0" value="${esc(w.price ?? '')}" placeholder="0.00" aria-label="Price in pounds" data-keep="wishPrice.${esc(w.id)}"></label>
     <button class="btn small primary">Save</button><button type="button" class="btn small ghost" data-act="editPrice" data-id="">Cancel</button>
-  </form>`;
+  </form>
+  ${safeUrl(w.url) ? `<div class="row wish-price-find"><button type="button" class="btn small ghost" data-act="findPrice" data-id="${esc(w.id)}">${icon('search')} Look the price up for me</button></div>` : ''}`;
 }
 const plannedBy = w => (w.planned ? (w.planned.uid === S.me().uid ? 'you' : firstName(w.planned.name)) : '');
 function card(w, n, cur) {
@@ -263,8 +265,9 @@ const filled = new Set();
 hooks.rendered.push(() => {
   for (const w of st.wishes) {
     if (!w.pending || filled.has(w.id)) continue;
-    const a = st.asks.find(x => x.kind === 'link' && x.url === w.pending);
-    const lost = !a && !!toMillis(w.createdAt) && Date.now() - toMillis(w.createdAt) > 6 * 60e3; // the ask has gone from the recent ones
+    const a = w.pendingAsk ? st.asks.find(x => x.id === w.pendingAsk) : st.asks.find(x => x.kind === 'link' && x.url === w.pending);
+    const since = w.pendingAt || toMillis(w.createdAt);
+    const lost = !a && !!since && Date.now() - since > 6 * 60e3; // the ask has gone from the recent ones
     // Still looking for the price, but the name is known: put the name on the card now.
     if (a && busy(a)) {
       if (a.named?.title && w.autoName && !filled.has(`${w.id}:name`)) {
@@ -276,13 +279,13 @@ hooks.rendered.push(() => {
     if (!a && !lost) continue;
     filled.add(w.id);
     const p = a?.state === 'done' ? a.product || {} : {};
-    const data = { pending: S.deleteField() };
+    const data = { pending: S.deleteField(), pendingAsk: S.deleteField(), pendingAt: S.deleteField() };
     if (w.autoName) {
       const name = p.title || w.fallback || '';
       if (name) data.name = String(name).slice(0, 120);
       data.autoName = !name;
     }
-    if (p.price && !w.price) data.price = Number(p.price) || null;
+    if (p.price && !w.price) { data.price = Number(p.price) || null; data.priceAt = p.priceAt || ''; }
     if (p.image && !w.image) data.image = p.image;
     if (p.shop) data.shop = p.shop;
     S.updateH(['wishes', w.id], data).catch(() => filled.delete(w.id));
@@ -304,7 +307,19 @@ actions.savePrice = f => {
   const v = f.price.value.trim(), n = Number(v);
   if (v !== '' && !(n >= 0)) return;
   keep.wishPrice = null; delete keep[`wishPrice.${w.id}`];
-  run(() => S.updateH(['wishes', w.id], { price: v === '' || n === 0 ? null : Math.round(n * 100) / 100 }), v === '' || n === 0 ? 'Price taken off' : `Price set to ${money(Math.round(n * 100) / 100)}`);
+  run(() => S.updateH(['wishes', w.id], { priceAt: '', price: v === '' || n === 0 ? null : Math.round(n * 100) / 100 }), v === '' || n === 0 ? 'Price taken off' : `Price set to ${money(Math.round(n * 100) / 100)}`);
+};
+// Ask again for a link's price (it goes on the card if found and nothing's been typed meanwhile).
+actions.findPrice = el => {
+  const w = byId(el.dataset.id); if (!w || !safeUrl(w.url)) return;
+  keep.wishPrice = null; delete keep[`wishPrice.${w.id}`];
+  filled.delete(w.id);
+  // The card waits for this new ask (by its id), not an earlier answer for the same link.
+  const ask = S.newId('asks');
+  run(() => S.batchH([
+    ['set', ['asks', ask], { kind: 'link', url: w.url, wish: `${w.child}-${w.occasion}`, state: 'requested', by: S.me(), createdAt: S.serverTimestamp() }],
+    ['update', ['wishes', w.id], { price: null, priceAt: '', pending: w.url, pendingAsk: ask, pendingAt: Date.now() }],
+  ]), 'Looking for the price…');
 };
 actions.wishPlanned = el => {
   const w = byId(el.dataset.id); if (!w) return;
@@ -316,7 +331,8 @@ actions.saveWish = f => {
   const url = urlIn(f.url.value);
   const [child, occasion] = (() => { const v = f.list.value; const i = v.lastIndexOf('-'); return [v.slice(0, i), v.slice(i + 1)]; })();
   const moved = child !== w.child || occasion !== w.occasion;
-  const data = { name, autoName: false, price: f.price.value === '' ? null : Number(f.price.value), notes: f.notes.value.trim().slice(0, 200), url, shop: url ? (url === w.url ? w.shop || hostOf(url) : hostOf(url)) : '' };
+  const newPrice = f.price.value === '' ? null : Number(f.price.value);
+  const data = { name, autoName: false, price: newPrice, ...(newPrice !== (w.price ?? null) ? { priceAt: '' } : {}), notes: f.notes.value.trim().slice(0, 200), url, shop: url ? (url === w.url ? w.shop || hostOf(url) : hostOf(url)) : '' };
   if (url !== (w.url || '')) { data.image = ''; if (url) data.pending = url; }
   if (moved) Object.assign(data, { child, occasion, rank: Math.max(-1, ...sortOpen(itemsOf(child, occasion)).map(rank)) + 1 });
   keep.wishEdit = null;
