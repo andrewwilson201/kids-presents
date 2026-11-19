@@ -3,11 +3,11 @@
 // round again), and typing a known friend's name fills in what we know.
 // A joint party has more than one birthday child: each is saved as its own
 // event with its own present, sharing a groupId and the party's details (js/gifts.js).
-import * as S from '../store.js?v=11';
-import { isDay, isTime, findDuplicate, samePerson, turningOn, daysBetween } from '../gifts.js?v=11';
-import { icon } from '../ui.js?v=11';
-import { st, esc, head, run, toast, render, routes, actions, hooks, arg, resetKeep, keep, today, fmtLong } from '../core.js?v=11';
-import { children, partyTitle, sibs, friends } from '../events.js?v=11';
+import * as S from '../store.js?v=12';
+import { isDay, isTime, findDuplicate, samePerson, turningOn, daysBetween } from '../gifts.js?v=12';
+import { icon } from '../ui.js?v=12';
+import { st, esc, head, run, toast, render, routes, actions, hooks, arg, resetKeep, keep, today, fmtLong } from '../core.js?v=12';
+import { children, partyTitle, sibs, friends } from '../events.js?v=12';
 
 // How many extra birthday children the form shows (a joint party).
 let extraFor = null, extraCount = 0;
@@ -54,7 +54,8 @@ routes.edit = () => {
       ${extraRows}
       <div><button type="button" class="btn small ghost" data-act="addBirthdayChild">${icon('plus')} Joint party? Add another birthday child</button>
       ${extraCount ? '<p class="tiny muted" style="margin:6px 0 0">Each birthday child gets their own present. To take one off, clear their name.</p>' : ''}</div>
-      <div class="three">${field('Date', 'date', v.date, { type: 'date' })}${field('Starts', 'start', v.start, { type: 'time' })}${field('Ends', 'end', v.end, { type: 'time' })}</div>
+      ${field('Date', 'date', v.date, { type: 'date' })}
+      <div class="two">${field('Starts', 'start', v.start, { type: 'time' })}${field('Ends', 'end', v.end, { type: 'time' })}</div>
       ${field('Where', 'venue', v.venue, { attrs: 'placeholder="Jump Zone trampoline park"' })}
       <details class="mini more-details" data-toggle="ev.more"${more ? ' open' : ''}><summary>More details: address, reply by, theme, notes</summary><div class="stack" style="margin-top:12px">
       ${field('Address', 'address', v.address)}

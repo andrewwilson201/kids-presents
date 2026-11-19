@@ -3,11 +3,11 @@
 // claimPresent), so you can't both end up buying one. Your own choice can be the
 // exact thing: paste its shop link and the name, price and picture fill in. What
 // you buy is saved to the ideas, so it's there to suggest next time.
-import * as S from '../store.js?v=11';
-import { matchIdeas, pastPresents, ageOn, childrenFor, fmt12, shopLinks, needsPresent, presentSorted, daysBetween, isDay, nameKey, shopName } from '../gifts.js?v=11';
-import { icon, childBadge, thumb } from '../ui.js?v=11';
-import { st, esc, head, section, run, toast, money, fmtLong, fmtDay, today, routes, actions, arg, route, hooks, render, busy, failed, keep, hostOf } from '../core.js?v=11';
-import { children, eventTitle, partyTitle, sibs, whenWords, presentChip, budgetOf, firstName, priceText } from '../events.js?v=11';
+import * as S from '../store.js?v=12';
+import { matchIdeas, pastPresents, ageOn, childrenFor, fmt12, shopLinks, needsPresent, presentSorted, daysBetween, isDay, nameKey, shopName } from '../gifts.js?v=12';
+import { icon, childBadge, thumb } from '../ui.js?v=12';
+import { st, esc, head, section, run, toast, money, fmtLong, fmtDay, today, routes, actions, arg, route, hooks, render, busy, failed, keep, hostOf } from '../core.js?v=12';
+import { children, eventTitle, partyTitle, sibs, whenWords, presentChip, budgetOf, firstName, priceText } from '../events.js?v=12';
 
 const ev = () => st.events.find(x => x.id === arg);
 
