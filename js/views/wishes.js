@@ -13,12 +13,12 @@
 // households/{hid}.family [{ id, name }], added, renamed and removed on the
 // Family tab. Their ideas are wishes too, with child = the person's id and
 // occasion 'ideas' (one list each, no birthday or countdown).
-import * as S from '../store.js?v=12';
-import { daysBetween, isDay, iso } from '../gifts.js?v=12';
-import { icon, thumb } from '../ui.js?v=12';
-import { st, esc, head, run, toast, money, today, fmtDay, routes, actions, arg, route, hooks, render, busy, failed, keep, hostOf, empty, plural, hold, toMillis, section } from '../core.js?v=12';
-import { children, firstName } from '../events.js?v=12';
-import { startTextScan } from './scan.js?v=12';
+import * as S from '../store.js?v=13';
+import { daysBetween, isDay, iso } from '../gifts.js?v=13';
+import { icon, thumb } from '../ui.js?v=13';
+import { st, esc, head, run, toast, money, today, fmtDay, routes, actions, arg, route, hooks, render, busy, failed, keep, hostOf, empty, plural, hold, toMillis, section } from '../core.js?v=13';
+import { children, firstName } from '../events.js?v=13';
+import { startTextScan } from './scan.js?v=13';
 
 const OCCASIONS = { christmas: 'Christmas', birthday: 'Birthday' };
 const family = () => st.household?.family || [];
