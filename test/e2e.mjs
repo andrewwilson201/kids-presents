@@ -116,7 +116,7 @@ await a.waitForSelector('text=Sarah is getting this');
 await shot(a, '06-andrew-sees-sarah');
 const ev = (await H.collection('events').get()).docs[0];
 const clash = await a.evaluate(async id => {
-  const S = await import('/js/store.js?v=12');
+  const S = await import('/js/store.js?v=13');
   try { await S.claimPresent(id, { state: 'chosen', name: 'Something else' }); return 'claimed'; } catch (e) { return e.code; }
 }, ev.id);
 assert.equal(clash, 'claimed', 'a second claim is refused');
@@ -391,7 +391,7 @@ await shot(a, '11k-wishes-ordered');
 await a.goto(`${SITE}?emulator#/wishes/charlie-birthday`);
 await a.waitForSelector('.wish:has-text("Millennium Falcon") >> text=£79.99');
 // A link shared from a shop's app offers the lists.
-await a.evaluate(async () => (await import('/js/views/wishes.js?v=12')).offerSharedLink('LEGO Friends Heartlake Cafe https://amzn.eu/d/abc123'));
+await a.evaluate(async () => (await import('/js/views/wishes.js?v=13')).offerSharedLink('LEGO Friends Heartlake Cafe https://amzn.eu/d/abc123'));
 await a.waitForSelector('text=Add this to a wish list?');
 await shot(a, '11l-shared-link');
 await a.click('button:has-text("Sophie\'s Christmas list")');
@@ -420,6 +420,51 @@ await a.waitForSelector('.wish:has-text("Roller skates")');
 const after = (await H.collection('wishes').get()).docs.map(d => d.data());
 assert.ok(!after.some(w => w.name === 'Board game'), 'the ordered one is cleared');
 assert.equal((await H.get()).data().wishTidied['sophie-christmas'], xmas);
+
+// 9f. Family: ideas for the grown-ups. Add someone, both jot ideas, order one, rename, remove.
+step('Family wish lists: add a person, ideas, ordered, rename, remove');
+await a.goto(`${SITE}?emulator#/wishes/charlie-christmas`);
+await a.click('.wish-kids a:has-text("Family")');
+await a.waitForSelector('text=No one here yet');
+for (const n of ['Dad', 'James']) { await a.fill('input[name=name]', n); await a.click('form[data-form=addPerson] button'); await a.waitForSelector(`text=Ideas for ${n}`); await a.goto(`${SITE}?emulator#/wishes/family`); await a.waitForSelector('.family-list'); }
+await a.click('.family-list a:has-text("Dad")');
+await a.waitForSelector('text=Ideas for Dad');
+await a.waitForSelector('text=No ideas yet');
+await a.fill('input[name=what]', 'Bird feeder camera'); await a.click('.wish-add button');
+await a.waitForSelector('.wish:has-text("Bird feeder camera")');
+assert.equal(await a.locator('.spend').count(), 0, 'no spend box until something is planned');
+await b.goto(`${SITE}?emulator#/wishes/family`);
+await b.waitForSelector('.family-list li:has-text("Dad") >> text=1 idea');
+await b.waitForSelector('.wish-kids a:has-text("Family") .count:text-is("1")');
+await b.click('.family-list a:has-text("Dad")');
+await b.fill('input[name=what]', 'Whisky tasting set'); await b.click('.wish-add button');
+await a.waitForSelector('.wish:has-text("Whisky tasting set") >> text=added by Sarah');
+await b.click('.wish:has-text("Bird feeder camera") >> text=Ordered it');
+await a.waitForSelector('.wish-done:has-text("Bird feeder camera") >> text=ordered by Sarah');
+await shot(a, '11n-family-list');
+// The edit form and a shared link both offer the family lists.
+await a.click('.wish:has-text("Whisky") >> text=Change');
+assert.ok((await a.$$eval('.wish-edit select[name=list] option', os => os.map(o => o.textContent))).includes('Ideas for James'));
+await a.click('.wish-edit >> text=Cancel');
+await a.evaluate(async () => (await import('/js/views/wishes.js?v=13')).offerSharedLink('Golf umbrella https://www.argos.co.uk/product/7654321'));
+await a.click('button:has-text("Ideas for James")');
+await a.waitForSelector('text=Ideas for James');
+await a.waitForSelector('.wish:has-text("Golf umbrella")');
+// Rename James, then remove him: his ideas go too.
+await a.click('[data-act=renamePerson]');
+await a.fill('.person-rename input', 'Uncle James');
+await a.click('.person-rename button:has-text("Save")');
+await b.goto(`${SITE}?emulator#/wishes/family`);
+await b.waitForSelector('.family-list a:has-text("Uncle James")');
+await shot(b, '11o-family');
+await a.waitForSelector('text=Ideas for Uncle James');
+await a.click('[data-act=removePerson]');
+await b.waitForSelector('.family-list a:has-text("Uncle James")', { state: 'detached' });
+const fam = (await H.get()).data().family;
+assert.deepEqual(fam.map(p => p.name), ['Dad']);
+const famWishes = (await H.collection('wishes').where('occasion', '==', 'ideas').get()).docs.map(d => d.data());
+assert.deepEqual(famWishes.map(w => w.name).sort(), ['Bird feeder camera', 'Whisky tasting set']);
+assert.ok(famWishes.every(w => w.child === fam[0].id));
 
 // 10. Calendar and home.
 step('Calendar, home, settings');

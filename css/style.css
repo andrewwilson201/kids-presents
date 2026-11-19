@@ -535,3 +535,20 @@ details.more .btn.danger { color: var(--danger); }
 .wish-price.finding .spinner { margin: 0; }
 .wish-price.about { font-weight: 650; }
 .wish-price-find { margin: 6px 0 0 30px; }
+
+/* Family wish lists */
+.seg.wish-kids a svg { width: 15px; height: 15px; vertical-align: -2px; }
+.family-list { margin-top: 12px; }
+.family-list > li { padding: 0; }
+.family-list a.grow { padding: 12px 14px 12px 16px; gap: 12px; align-items: center; }
+.family-list .count { flex: none; font: 700 12.5px/1 var(--sans); background: var(--accent-soft); color: var(--accent-soft-text); border-radius: 999px; padding: 5px 9px; }
+.family-list .chev { width: 18px; height: 18px; color: var(--faint); flex: none; }
+.family-list .meta i { color: var(--text); font-style: normal; }
+.avatar-tile { flex: none; width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; font: 700 17px/1 var(--sans); background: var(--t-other); color: var(--t-other-i); }
+.family-list li:nth-child(4n+2) .avatar-tile { background: var(--t-veg); color: var(--t-veg-i); }
+.family-list li:nth-child(4n+3) .avatar-tile { background: var(--t-poultry); color: var(--t-poultry-i); }
+.family-list li:nth-child(4n+4) .avatar-tile { background: var(--t-fish); color: var(--t-fish-i); }
+.person-bar { gap: 4px; margin: 4px 0 2px; align-items: center; }
+.person-bar .btn svg { width: 15px; height: 15px; }
+.person-rename { gap: 6px; margin: 4px 0 2px; padding: 10px 12px; }
+.person-rename input { flex: 1; min-width: 0; }

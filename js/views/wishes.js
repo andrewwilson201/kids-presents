@@ -8,14 +8,26 @@
 //   rank (lower is higher up), autoName (name still the placeholder), pending (a link being read),
 //   planned {uid, name, at} | null (one of you is planning to buy it), ordered {uid, name, at} | null,
 //   by {uid, name}, createdAt }
-import * as S from '../store.js?v=12';
-import { daysBetween, isDay, iso } from '../gifts.js?v=12';
-import { icon, thumb } from '../ui.js?v=12';
-import { st, esc, head, run, toast, money, today, fmtDay, routes, actions, arg, route, hooks, render, busy, failed, keep, hostOf, empty, plural, hold, toMillis, section } from '../core.js?v=12';
-import { children, firstName } from '../events.js?v=12';
-import { startTextScan } from './scan.js?v=12';
+//
+// Family: ideas for the grown-ups (grandparents, uncles, aunts). The people are
+// households/{hid}.family [{ id, name }], added, renamed and removed on the
+// Family tab. Their ideas are wishes too, with child = the person's id and
+// occasion 'ideas' (one list each, no birthday or countdown).
+import * as S from '../store.js?v=13';
+import { daysBetween, isDay, iso } from '../gifts.js?v=13';
+import { icon, thumb } from '../ui.js?v=13';
+import { st, esc, head, run, toast, money, today, fmtDay, routes, actions, arg, route, hooks, render, busy, failed, keep, hostOf, empty, plural, hold, toMillis, section } from '../core.js?v=13';
+import { children, firstName } from '../events.js?v=13';
+import { startTextScan } from './scan.js?v=13';
 
 const OCCASIONS = { christmas: 'Christmas', birthday: 'Birthday' };
+const family = () => st.household?.family || [];
+const isFamily = id => family().some(p => p.id === id);
+// Every list a present can go on: each child's two, then one per family member.
+const allLists = () => [
+  ...children().flatMap(c => Object.keys(OCCASIONS).map(o => ({ key: `${c.id}-${o}`, kid: c, occ: o }))),
+  ...family().map(p => ({ key: `${p.id}-ideas`, kid: p, occ: 'ideas' })),
+];
 const safeUrl = u => (/^https:\/\/[^\s"'<>]+$/.test(u || '') ? u : '');
 const urlIn = s => String(s || '').match(/https:\/\/[^\s<>"']+/)?.[0] || '';
 const rank = w => (typeof w.rank === 'number' ? w.rank : 0);
@@ -56,8 +68,11 @@ const LAST = 'presentsWishList';
 function current() {
   const kids = children();
   const parse = s => {
+    if (s === 'family') return { family: true };
     const i = String(s || '').lastIndexOf('-');
-    const kid = kids.find(c => c.id === String(s).slice(0, i)); const occ = String(s).slice(i + 1);
+    const id = String(s).slice(0, i), occ = String(s).slice(i + 1);
+    if (occ === 'ideas') { const p = family().find(x => x.id === id); return p ? { kid: p, occ } : null; }
+    const kid = kids.find(c => c.id === id);
     return kid && OCCASIONS[occ] ? { kid, occ } : null;
   };
   let last = null; try { last = localStorage.getItem(LAST); } catch {}
@@ -67,29 +82,31 @@ function current() {
   const bday = nextBirthday(kid, today());
   return { kid, occ: bday && bday < nextChristmas(today()) ? 'birthday' : 'christmas' };
 }
-const listKey = ({ kid, occ }) => `${kid.id}-${occ}`;
+const listKey = ({ kid, occ, family: fam }) => (fam ? 'family' : `${kid.id}-${occ}`);
 const itemsOf = (kidId, occ) => st.wishes.filter(w => w.child === kidId && w.occasion === occ);
 const sortOpen = list => list.filter(w => !w.ordered).sort((a, b) => rank(a) - rank(b) || toMillis(a.createdAt) - toMillis(b.createdAt));
-const listName = (kid, occ) => `${firstName(kid.name)}'s ${occ === 'christmas' ? 'Christmas' : 'birthday'} list`;
+const listName = (kid, occ) => (occ === 'ideas' ? `Ideas for ${kid.name}` : `${firstName(kid.name)}'s ${occ === 'christmas' ? 'Christmas' : 'birthday'} list`);
 
 // ---------- the screen ----------
 routes.wishes = () => {
   const kids = children();
   if (!kids.length) return `${head('Wish lists')}${empty('star', 'No children yet', 'Add your children in Settings first.', '<a class="btn primary" href="#/settings">Settings</a>')}`;
   const cur = current();
-  const { kid, occ } = cur;
   try { localStorage.setItem(LAST, listKey(cur)); } catch {}
+  if (cur.family) return familyScreen(kids);
+  const { kid, occ } = cur;
+  const fam = occ === 'ideas';
   const all = itemsOf(kid.id, occ);
   const open = sortOpen(all);
   const done = all.filter(w => w.ordered).sort((a, b) => String(b.ordered.at || '').localeCompare(String(a.ordered.at || '')));
   const sub = [open.length ? `${plural(open.length, 'idea')} to choose from` : '', done.length ? `${done.length} ordered` : ''].filter(Boolean).join(' · ');
   const noBirthday = occ === 'birthday' && !isDay(kid.birthday);
-  return `${head(esc(listName(kid, occ)), { eyebrow: countdown(kid, occ) || 'Wish lists', sub })}
+  return `${head(esc(listName(kid, occ)), { eyebrow: fam ? 'Family' : countdown(kid, occ) || 'Wish lists', sub })}
     ${sharedOffer()}
-    ${afterTheDay(cur)}
-    ${all.length ? spendCard(open, done) : ''}
-    ${kids.length > 1 ? `<div class="seg wish-kids">${kids.map(c => `<a class="${c.id === kid.id ? 'on' : ''}" href="#/wishes/${esc(c.id)}-${occ}">${esc(firstName(c.name))}${counter(c.id, occ)}</a>`).join('')}</div>` : ''}
-    <div class="seg wish-occ">${Object.entries(OCCASIONS).map(([k, label]) => `<a class="${k === occ ? 'on' : ''}" href="#/wishes/${esc(kid.id)}-${k}">${icon(k === 'christmas' ? 'star' : 'cake')} ${label}${counter(kid.id, k)}</a>`).join('')}</div>
+    ${fam ? '' : afterTheDay(cur)}
+    ${all.length && (!fam || spend(all).counted) ? spendCard(open, done) : ''}
+    ${whoTabs(kids, fam ? 'family' : kid.id, fam ? 'christmas' : occ)}
+    ${fam ? personBar(kid) : `<div class="seg wish-occ">${Object.entries(OCCASIONS).map(([k, label]) => `<a class="${k === occ ? 'on' : ''}" href="#/wishes/${esc(kid.id)}-${k}">${icon(k === 'christmas' ? 'star' : 'cake')} ${label}${counter(kid.id, k)}</a>`).join('')}</div>`}
     ${noBirthday ? `<p class="small muted" style="margin:8px 4px 0">Add ${esc(firstName(kid.name))}'s birthday in <a href="#/settings">Settings</a> to see a countdown here.</p>` : ''}
     <form class="card wish-add" data-form="addWish">
       <label class="field">Add an idea<span class="hint">Paste a link from a shop and the name, price and picture fill in. Or just type what it is.</span>
@@ -97,8 +114,9 @@ routes.wishes = () => {
         <button class="btn primary">${icon('plus')} Add</button></div></label>
     </form>
     ${open.length ? `<ol class="wishes" id="wishRank">${open.map((w, n) => card(w, n, cur)).join('')}</ol>
-      ${open.length > 1 ? '<p class="small muted wish-tip">Drag a card by its handle to put the favourites at the top.</p>' : ''}`
-      : done.length ? '' : empty('gift', 'Nothing on this list yet', `Add what ${esc(firstName(kid.name))} would love. You'll both see it straight away.`)}
+      ${open.length > 1 ? `<p class="small muted wish-tip">Drag a card by its handle to put the ${fam ? 'best ideas' : 'favourites'} at the top.</p>` : ''}`
+      : done.length ? '' : fam ? empty('gift', 'No ideas yet', `Whenever one of you thinks of something ${esc(kid.name)} would like, jot it here. You'll both see it straight away.`)
+        : empty('gift', 'Nothing on this list yet', `Add what ${esc(firstName(kid.name))} would love. You'll both see it straight away.`)}
     ${done.length ? `${section('Ordered', { count: done.length })}<ul class="list card wish-done">${done.map(w => orderedRow(w)).join('')}</ul>
       <div class="row end"><button class="btn small ghost" data-act="clearOrdered">${icon('trash')} Clear the ordered ones</button></div>` : ''}`;
 };
@@ -123,6 +141,66 @@ function spendCard(open, done) {
     ${note ? `<span class="spend-note">${note}</span>` : ''}
   </div>`;
 }
+
+// ---------- whose list ----------
+function whoTabs(kids, on, occ) {
+  if (kids.length < 2 && !family().length && on !== 'family') return '';
+  const famCount = family().reduce((n, p) => n + itemsOf(p.id, 'ideas').filter(w => !w.ordered).length, 0);
+  return `<div class="seg wish-kids">${kids.map(c => `<a class="${c.id === on ? 'on' : ''}" href="#/wishes/${esc(c.id)}-${occ}">${esc(firstName(c.name))}${counter(c.id, occ)}</a>`).join('')}
+    <a class="${on === 'family' ? 'on' : ''}" href="#/wishes/family">${icon('users')} Family${famCount ? ` <span class="count">${famCount}</span>` : ''}</a></div>`;
+}
+
+// ---------- family ----------
+// One card per grown-up, with how many ideas are waiting. Add someone with just
+// a name; rename or remove them from their own list.
+function familyScreen(kids) {
+  const people = family();
+  const total = people.reduce((n, p) => n + itemsOf(p.id, 'ideas').filter(w => !w.ordered).length, 0);
+  return `${head('Family', { eyebrow: 'Wish lists', sub: people.length ? `${plural(people.length, 'person', 'people')} · ${plural(total, 'idea')}` : 'Present ideas for the grown-ups' })}
+    ${whoTabs(kids, 'family', 'christmas')}
+    ${people.length ? `<ul class="list card family-list">${people.map(p => {
+      const items = itemsOf(p.id, 'ideas'); const open = items.filter(w => !w.ordered).length, done = items.length - open;
+      const top = sortOpen(items)[0];
+      return `<li class="link-row"><a class="grow row nowrap" href="#/wishes/${esc(p.id)}-ideas"><span class="avatar-tile">${esc(String(p.name).trim().charAt(0).toUpperCase())}</span>
+        <span class="grow"><span class="name">${esc(p.name)}</span><span class="meta">${esc([open ? plural(open, 'idea') : 'No ideas yet', done ? `${done} ordered` : ''].filter(Boolean).join(' · '))}${top ? ` · <i>${esc(top.name)}</i>` : ''}</span></span>
+        ${open ? `<span class="count">${open}</span>` : ''}${icon('chevron', 'chev')}</a></li>`;
+    }).join('')}</ul>` : empty('users', 'No one here yet', 'Add the grown-ups you buy for, like Dad or your brothers. Then either of you can jot down an idea the moment you think of it.')}
+    <form class="card wish-add" data-form="addPerson">
+      <label class="field">Add a person<span class="hint">Just a name. You can rename or remove them later.</span>
+        <div class="row nowrap"><input type="text" name="name" required autocomplete="off" maxlength="40" placeholder="Dad, Uncle Tom, Jo" aria-label="Their name" data-keep="family.name">
+        <button class="btn primary">${icon('plus')} Add</button></div></label>
+    </form>`;
+}
+function personBar(p) {
+  if (keep.renamePerson === p.id) return `<form class="card row nowrap person-rename" data-form="savePersonName" data-id="${esc(p.id)}">
+      <input type="text" name="name" required maxlength="40" value="${esc(p.name)}" aria-label="Name" data-keep="rename.${esc(p.id)}">
+      <button class="btn small primary">Save</button><button type="button" class="btn small ghost" data-act="renamePerson" data-id="">Cancel</button></form>`;
+  return `<div class="row person-bar"><a class="btn small ghost" href="#/wishes/family">${icon('back')} Everyone</a><span class="spacer"></span>
+    <button class="btn small ghost" data-act="renamePerson" data-id="${esc(p.id)}">${icon('edit')} Rename</button>
+    <button class="btn small ghost danger" data-act="removePerson" data-id="${esc(p.id)}">${icon('trash')} Remove</button></div>`;
+}
+const slug = s => String(s).toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '').slice(0, 20) || 'person';
+actions.addPerson = f => {
+  const name = f.name.value.trim().replace(/\s+/g, ' ').slice(0, 40); if (!name) return;
+  const taken = new Set([...children(), ...family()].map(x => x.id));
+  let id = `f${slug(name)}`; for (let n = 2; taken.has(id); n++) id = `f${slug(name)}${n}`;
+  delete keep['family.name']; f.name.value = '';
+  location.hash = `#/wishes/${id}-ideas`;
+  run(() => S.updateH([], { family: [...family().map(p => ({ ...p })), { id, name }] }), `Added ${name}`);
+};
+actions.renamePerson = el => { if (keep.renamePerson) delete keep[`rename.${keep.renamePerson}`]; keep.renamePerson = el.dataset.id || null; render(); if (keep.renamePerson) document.querySelector('.person-rename input')?.select(); };
+actions.savePersonName = f => {
+  const name = f.name.value.trim().replace(/\s+/g, ' ').slice(0, 40); if (!name) return;
+  keep.renamePerson = null; delete keep[`rename.${f.dataset.id}`];
+  run(() => S.updateH([], { family: family().map(p => (p.id === f.dataset.id ? { ...p, name } : { ...p })) }), 'Renamed');
+};
+actions.removePerson = el => {
+  const p = family().find(x => x.id === el.dataset.id); if (!p) return;
+  const items = itemsOf(p.id, 'ideas');
+  if (!confirm(`Remove ${p.name}${items.length ? ` and their ${plural(items.length, 'idea')}` : ''}?`)) return;
+  location.hash = '#/wishes/family';
+  run(() => S.batchH([...items.map(w => ['delete', ['wishes', w.id]]), ['update', [], { family: family().filter(x => x.id !== p.id) }]]), `Removed ${p.name}`);
+};
 
 const counter = (kidId, occ) => { const n = itemsOf(kidId, occ).filter(w => !w.ordered).length; return n ? ` <span class="count">${n}</span>` : ''; };
 
@@ -174,7 +252,7 @@ function orderedRow(w) {
     <button class="btn small ghost" data-act="wishUnordered" data-id="${esc(w.id)}" aria-label="Not ordered after all">Undo</button></li>`;
 }
 function editForm(w, cur) {
-  const lists = children().flatMap(c => Object.keys(OCCASIONS).map(o => ({ key: `${c.id}-${o}`, label: listName(c, o) })));
+  const lists = allLists().map(l => ({ key: l.key, label: listName(l.kid, l.occ) }));
   return `<form class="stack wish-edit" data-form="saveWish" data-id="${esc(w.id)}">
     <label class="field">What<input type="text" name="name" required value="${esc(w.autoName ? '' : w.name)}" placeholder="What it is"></label>
     <div class="two"><label class="field">Price £<input type="number" name="price" inputmode="decimal" step="any" value="${esc(w.price ?? '')}"></label>
@@ -340,7 +418,7 @@ actions.saveWish = f => {
   run(async () => {
     await S.updateH(['wishes', w.id], data);
     if (data.pending) await askLink(url, `${child}-${occasion}`);
-  }, moved ? `Moved to ${listName(children().find(c => c.id === child) || { name: child }, occasion)}` : 'Saved');
+  }, moved ? `Moved to ${listName(allLists().find(l => l.key === `${child}-${occasion}`)?.kid || { name: child }, occasion)}` : 'Saved');
 };
 actions.delWish = el => { if (confirm('Delete this from the list?')) { keep.wishEdit = null; run(() => S.deleteH(['wishes', el.dataset.id]), 'Deleted'); } };
 actions.wishOrdered = el => {
@@ -455,7 +533,7 @@ export const looksLikeShopLink = text => !!urlIn(text) && String(text).length < 
 function sharedOffer() {
   if (!shared) return '';
   const url = urlIn(shared);
-  const lists = children().flatMap(c => Object.keys(OCCASIONS).map(o => ({ key: `${c.id}-${o}`, kid: c, occ: o })));
+  const lists = allLists();
   return `<div class="notice info shared-offer">${icon('link')}<span class="grow"><b>Add this to a wish list?</b><br><span class="small">${esc(hostOf(url))}</span>
     <span class="row" style="margin-top:10px">${lists.map(l => `<button class="btn small tonal" data-act="addShared" data-id="${esc(l.key)}">${esc(listName(l.kid, l.occ))}</button>`).join('')}</span>
     <span class="row" style="margin-top:8px"><button class="btn small ghost" data-act="sharedInvite">It's a party invite</button><button class="btn small ghost" data-act="sharedDismiss">Not now</button></span></span></div>`;
@@ -463,7 +541,7 @@ function sharedOffer() {
 actions.addShared = el => {
   const text = shared; shared = null;
   const v = el.dataset.id; const i = v.lastIndexOf('-');
-  const cur = { kid: children().find(c => c.id === v.slice(0, i)), occ: v.slice(i + 1) };
+  const cur = allLists().find(l => l.key === v) || {};
   if (!cur.kid || !text) return render();
   // Shops share "Name of the thing https://…"; that name is the fallback if the link can't be read.
   const url = urlIn(text);
