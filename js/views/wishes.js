@@ -8,12 +8,12 @@
 //   rank (lower is higher up), autoName (name still the placeholder), pending (a link being read),
 //   planned {uid, name, at} | null (one of you is planning to buy it), ordered {uid, name, at} | null,
 //   by {uid, name}, createdAt }
-import * as S from '../store.js?v=11';
-import { daysBetween, isDay, iso } from '../gifts.js?v=11';
-import { icon, thumb } from '../ui.js?v=11';
-import { st, esc, head, run, toast, money, today, fmtDay, routes, actions, arg, route, hooks, render, busy, failed, keep, hostOf, empty, plural, hold, toMillis, section } from '../core.js?v=11';
-import { children, firstName } from '../events.js?v=11';
-import { startTextScan } from './scan.js?v=11';
+import * as S from '../store.js?v=12';
+import { daysBetween, isDay, iso } from '../gifts.js?v=12';
+import { icon, thumb } from '../ui.js?v=12';
+import { st, esc, head, run, toast, money, today, fmtDay, routes, actions, arg, route, hooks, render, busy, failed, keep, hostOf, empty, plural, hold, toMillis, section } from '../core.js?v=12';
+import { children, firstName } from '../events.js?v=12';
+import { startTextScan } from './scan.js?v=12';
 
 const OCCASIONS = { christmas: 'Christmas', birthday: 'Birthday' };
 const safeUrl = u => (/^https:\/\/[^\s"'<>]+$/.test(u || '') ? u : '');
