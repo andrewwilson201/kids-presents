@@ -173,7 +173,7 @@ function familyScreen(kids) {
 }
 function personBar(p) {
   if (keep.renamePerson === p.id) return `<form class="card row nowrap person-rename" data-form="savePersonName" data-id="${esc(p.id)}">
-      <input type="text" name="name" required maxlength="40" value="${esc(p.name)}" aria-label="Name">
+      <input type="text" name="name" required maxlength="40" value="${esc(p.name)}" aria-label="Name" data-keep="rename.${esc(p.id)}">
       <button class="btn small primary">Save</button><button type="button" class="btn small ghost" data-act="renamePerson" data-id="">Cancel</button></form>`;
   return `<div class="row person-bar"><a class="btn small ghost" href="#/wishes/family">${icon('back')} Everyone</a><span class="spacer"></span>
     <button class="btn small ghost" data-act="renamePerson" data-id="${esc(p.id)}">${icon('edit')} Rename</button>
@@ -188,10 +188,10 @@ actions.addPerson = f => {
   location.hash = `#/wishes/${id}-ideas`;
   run(() => S.updateH([], { family: [...family().map(p => ({ ...p })), { id, name }] }), `Added ${name}`);
 };
-actions.renamePerson = el => { keep.renamePerson = el.dataset.id || null; render(); if (keep.renamePerson) document.querySelector('.person-rename input')?.select(); };
+actions.renamePerson = el => { if (keep.renamePerson) delete keep[`rename.${keep.renamePerson}`]; keep.renamePerson = el.dataset.id || null; render(); if (keep.renamePerson) document.querySelector('.person-rename input')?.select(); };
 actions.savePersonName = f => {
   const name = f.name.value.trim().replace(/\s+/g, ' ').slice(0, 40); if (!name) return;
-  keep.renamePerson = null;
+  keep.renamePerson = null; delete keep[`rename.${f.dataset.id}`];
   run(() => S.updateH([], { family: family().map(p => (p.id === f.dataset.id ? { ...p, name } : { ...p })) }), 'Renamed');
 };
 actions.removePerson = el => {
